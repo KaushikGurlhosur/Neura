@@ -1,5 +1,6 @@
 import Users from "@/lib/models/Users";
 import dbConnect from "@/lib/mongodb";
+import { NextResponse } from "next/server";
 
 export async function POST(request) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request) {
     // Creating a test user
     const user = await Users.create(userData);
 
-    return Response.json(
+    return NextResponse.json(
       {
         success: true,
         message: "Test user created successfully",
@@ -20,7 +21,7 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error creating test user: ", error);
-    return Response.json(
+    return NextResponse.json(
       {
         message: "Failed to create test user",
         error: error.message,
@@ -35,7 +36,7 @@ export async function GET() {
     await dbConnect();
 
     const users = await Users.find().select("-password").limit(100);
-    return Response.json(
+    return NextResponse.json(
       {
         success: true,
         message: "Test users fetched successfully",
@@ -45,7 +46,7 @@ export async function GET() {
     );
   } catch (error) {
     console.error("Error fetching test user: ", error);
-    return Response.json(
+    return NextResponse.json(
       {
         message: "Failed to fetch test user",
         success: false,
