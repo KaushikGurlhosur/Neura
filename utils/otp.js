@@ -36,11 +36,39 @@ export async function sendVerificationOTP(email, name) {
 }
 
 export async function verifyOTP(email, userInputOtp) {
-  const record = await OTP.findOne({
-    email,
-    isUsed: false,
-    expiresAt: { $gt: new Date() },
-  }).sort({ createdAt: -1 }); // Get the latest OTP
+  // 2. NORMALIZATION: Users might type lowercase 'a1b2' instead of 'A1B2'.
+  const normalizeOTP = String(userInputOtp).trim().toUpperCase();
+  const now = new Date(); // Get current time
+
+  // ATOMICITY: We use findOneAndUpdate to prevent "Race Conditions"
+  // This first check tries to find and consume the CORRECT OTP in one step.
+  const matched = await OTP.findOneAndUpdate(
+    {
+      email,
+      otp: normalizeOTP,
+      isUsed: false,
+      expiresAt: { $gt: now }, // Check if OTP is still valid
+      attempts: { $lt: 3 }, // Limit to 3 attempts
+    },
+    { $set: { isUsed: true } },
+    { sort: { createdAt: -1 }, new: true },
+  );
+
+  if (matched) {
+    return { success: true, message: "OTP verified successfully." };
+  }
+
+  // 4. ATOMIC INCREMENT: If no match, increment attempts on the latest active OTP.
+  const record = await OTP.findOneAndUpdate(
+    {
+      email,
+      isUsed: false,
+      expiresAt: { $gt: now },
+      attempts: { $lt: 3 },
+    },
+    { $inc: { attempts: 1 } },
+    { sort: { createdAt: -1 }, new: true },
+  );
 
   if (!record) {
     return {
@@ -49,7 +77,7 @@ export async function verifyOTP(email, userInputOtp) {
     };
   }
 
-  // Check attempts
+  // 5. AUTO-DELETION: If the 3rd attempt just failed, clean up.
   if (record.attempts >= 3) {
     await OTP.deleteOne({ _id: record._id });
     return {
@@ -58,18 +86,8 @@ export async function verifyOTP(email, userInputOtp) {
     };
   }
 
-  // Compare OTP
-  if (record.otp === userInputOtp) {
-    record.isUsed = true;
-    await record.save();
-    return { success: true, message: "OTP verified successfully." };
-  } else {
-    record.attempts += 1;
-    await record.save();
-
-    return {
-      success: false,
-      message: `Wrong code. ${3 - record.attempts} attempts remaining.`,
-    };
-  }
+  return {
+    success: false,
+    message: `Wrong code. ${3 - record.attempts} attempts remaining.`,
+  };
 }
