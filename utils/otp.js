@@ -40,23 +40,8 @@ export async function verifyOTP(email, userInputOtp) {
   const normalizeOTP = String(userInputOtp).trim().toUpperCase();
   const now = new Date(); // Get current time
 
-  // ATOMICITY: We use findOneAndUpdate to prevent "Race Conditions"
+  // 3. ATOMICITY: We use findOneAndUpdate to prevent "Race Conditions"
   // This first check tries to find and consume the CORRECT OTP in one step.
-  const matched = await OTP.findOneAndUpdate(
-    {
-      email,
-      otp: normalizeOTP,
-      isUsed: false,
-      expiresAt: { $gt: now }, // Check if OTP is still valid
-      attempts: { $lt: 3 }, // Limit to 3 attempts
-    },
-    { $set: { isUsed: true } },
-    { sort: { createdAt: -1 }, new: true },
-  );
-
-  if (matched) {
-    return { success: true, message: "OTP verified successfully." };
-  }
 
   // 4. ATOMIC INCREMENT: If no match, increment attempts on the latest active OTP.
   const record = await OTP.findOneAndUpdate(
@@ -75,6 +60,13 @@ export async function verifyOTP(email, userInputOtp) {
       success: false,
       message: "OTP expired or not found. Please resend.",
     };
+  }
+
+  // LOGIC: Compare the code manually now that we have the latest record
+  if (record.otp === normalizeOTP) {
+    record.isUsed = true;
+    await record.save();
+    return { success: true, message: "OTP verified successfully." };
   }
 
   // 5. AUTO-DELETION: If the 3rd attempt just failed, clean up.
