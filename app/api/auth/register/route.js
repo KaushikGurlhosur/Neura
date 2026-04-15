@@ -95,6 +95,8 @@ export async function POST(request) {
         success: true,
         message: "User registered successfully",
         user: newUser.toJSON(),
+        userId: newUser._id,
+        email: newUser.email,
         requiresVerification: true,
         // Pass devOTP only in development mode for easy testing
         ...(process.env.NODE_ENV === "development" && {
