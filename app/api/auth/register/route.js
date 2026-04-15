@@ -1,5 +1,6 @@
 import Users from "@/lib/models/Users";
 import dbConnect from "@/lib/mongodb";
+import { sendVerificationOTP } from "@/utils/otp";
 import { NextResponse } from "next/server";
 
 export async function POST(request) {
@@ -11,10 +12,12 @@ export async function POST(request) {
 
     // Check if user exists
 
+    // 1. NORMALIZE & SEARCH
     const searchCriteria = [];
-    if (email) searchCriteria.push({ email });
-    if (phoneNumber) searchCriteria.push({ phoneNumber });
-    if (username) searchCriteria.push({ username });
+    if (email) searchCriteria.push({ email: email.toLowerCase().trim() });
+    if (phoneNumber) searchCriteria.push({ phoneNumber: phoneNumber.trim() });
+    if (username)
+      searchCriteria.push({ username: username.toLowerCase().trim() });
 
     const existingUser = await Users.findOne({
       $or: searchCriteria,
@@ -39,7 +42,7 @@ export async function POST(request) {
     if (!username || username.trim().length < 3) {
       errors.push("Username must be at least 3 characters long.");
     }
-    if (!password || password.length < 8) {
+    if (!password || password.trim().length < 8) {
       errors.push("Password mucst be at least 8 characters long.");
     }
     if (!email && !phoneNumber) {
@@ -62,20 +65,41 @@ export async function POST(request) {
       );
     }
 
+    // CREATE UNVERIFIED USER
     const newUser = await Users.create({
       name,
-      username,
-      password,
-      email,
+      username: username.toLowerCase().trim(),
+      password: password.trim(),
+      email: email?.toLowerCase().trim(),
       phoneNumber,
-      bio,
+      bio: bio || "Hey there! I am using Neura.",
+      isVerified: false,
     });
+
+    // TRIGGER OTP & HANDLE FAILURE (The Rollback)
+    const otpResult = await sendVerificationOTP(newUser.email, newUser.name);
+
+    if (!otpResult.success) {
+      await Users.findByIdAndDelete(newUser._id);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Failed to send verification email. Please try again.",
+        },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json(
       {
         success: true,
         message: "User registered successfully",
         user: newUser.toJSON(),
+        requiresVerification: true,
+        // Pass devOTP only in development mode for easy testing
+        ...(process.env.NODE_ENV === "development" && {
+          devOTP: otpResult.devOTP,
+        }),
       },
       { status: 201 },
     );
