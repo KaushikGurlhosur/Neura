@@ -40,6 +40,29 @@ export async function POST(request) {
       );
     }
 
+    // 5. PASSWORD VALIDATION
+
+    const isValid = await user.comparePassword(password);
+
+    if (!isValid) {
+      user.security = user.security || {}; // Ensure security object exists
+      user.security.failedAttempts = (user.security.failedAttempts || 0) + 1;
+
+      // Lock account after 5 failed attempts
+      if (user.security.failedAttempts >= 5) {
+        user.security.isLocked = true;
+        user.security.lockUntil = new Date(Date.now() + 60 * 60 * 1000); // Lock for 60 minutes
+      }
+      await user.save();
+      return NextResponse.json(
+        {
+          success: false,
+          message: "invalid credentials",
+        },
+        { status: 401 },
+      );
+    }
+
     // 3. CHECK LOCK STATUS (Timed "Lazy" Unlock)
     if (user.security?.isLocked) {
       const now = new Date();
@@ -73,29 +96,6 @@ export async function POST(request) {
           message: "Account not verified.",
           requiresVerification: true,
           userId: user._id,
-        },
-        { status: 401 },
-      );
-    }
-
-    // 5. PASSWORD VALIDATION
-
-    const isValid = await user.comparePassword(password);
-
-    if (!isValid) {
-      user.security = user.security || {}; // Ensure security object exists
-      user.security.failedAttempts = (user.security.failedAttempts || 0) + 1;
-
-      // Lock account after 5 failed attempts
-      if (user.security.failedAttempts >= 5) {
-        user.security.isLocked = true;
-        user.security.lockUntil = new Date(Date.now() + 60 * 60 * 1000); // Lock for 60 minutes
-      }
-      await user.save();
-      return NextResponse.json(
-        {
-          success: false,
-          message: "invalid credentials",
         },
         { status: 401 },
       );
