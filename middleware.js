@@ -18,7 +18,7 @@ export async function middleware(request) {
 
   if (token) {
     try {
-      const secret = new TextDecoder().encode(process.env.JWT_SECRET);
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
       await jwtVerify(token, secret); // Verify token validity and expiration
     } catch (error) {
       const response = NextResponse.redirect(new URL("/login", request.url));
