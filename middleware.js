@@ -1,5 +1,5 @@
 import { jwtVerify } from "jose";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 export async function middleware(request) {
   const token = request.cookies.get("token")?.value; // Get token from cookies
@@ -13,7 +13,7 @@ export async function middleware(request) {
     pathname === "/";
 
   if (!isPublicRoute && !token) {
-    return NextRequest.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   if (token) {
