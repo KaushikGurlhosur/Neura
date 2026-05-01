@@ -11,9 +11,22 @@ export function useWebSocket() {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
 
+  // This ref acts as a "master switch" to tell the hook whether
+  // it SHOULD be trying to connect or if it should stay off.
+  const shouldReconnectRef = useRef(true);
+
   // CONNECTION LOGIC
   const connect = useCallback((token) => {
     if (!token) return;
+
+    // Reset the flag: we want to be connected now
+    shouldReconnectRef.current = true;
+
+    // If a connection already exists (even if it's currently connecting),
+    // we kill it before starting a new one to prevent duplicate sockets.
+    if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
+      wsRef.current.close();
+    }
 
     // Support both secure wss and non-secure ws connections
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -51,6 +64,10 @@ export function useWebSocket() {
       console.log("Websocket disconnected ❌");
       setIsConnected(false);
 
+      // If disconnect() was called, shouldReconnectRef.current is FALSE,
+      // so we stop right here and don't trigger the 3-second timer.
+      if (!shouldReconnectRef.current) return;
+
       // AUTO RECONNECT: This is vital for mobile users switching between WiFi and Mobile data
       reconnectTimeoutRef.current = setTimeout(() => {
         console.log("Attempting to reconnect...");
@@ -61,8 +78,12 @@ export function useWebSocket() {
 
   // DISCONNECT LOGIC
   const disconnect = useCallback(() => {
+    shouldReconnectRef.current = false; // "Don't try to come back"
     if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-    if (wsRef.current) wsRef.current.close();
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null; // Garbage collection
+    }
   }, []);
 
   // INCOMING MESSAGE HANDLER
@@ -100,6 +121,20 @@ export function useWebSocket() {
         );
         break;
 
+      // Your backend was sending this, but the hook was ignoring it.
+      // Now it dispatches a global event for the UI to catch.
+      case "group_typing":
+        window.dispatchEvent(
+          new CustomEvent("groupTyping", {
+            detail: {
+              groupId: data.groupId,
+              userId: data.userId,
+              isTyping: data.isTyping,
+            },
+          }),
+        );
+        break;
+
       case "typing":
         window.dispatchEvent(
           new CustomEvent("userTyping", {
@@ -126,10 +161,15 @@ export function useWebSocket() {
     }
   }, []);
 
+  // Replaced Date.now() with a secure UUID generator.
+  const generateId = () =>
+    globalThis.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
   // Helper for Private Messages
   const sendPrivateMessage = useCallback(
     (receiverId, content, replyTo = null) => {
-      const tempId = Date.now().toString(); // Temporary ID for Optimistic UI
+      const tempId = generateId(); // Temporary ID for Optimistic UI
 
       sendMessage("private_message", { receiverId, content, replyTo, tempId });
       return tempId; // Return the tempId so that the UI can display the message immediately
