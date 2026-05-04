@@ -24,7 +24,8 @@ export function useWebSocket() {
 
     // If a connection already exists (even if it's currently connecting),
     // we kill it before starting a new one to prevent duplicate sockets.
-    if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
+    if (wsRef.current) {
+      wsRef.current.onclose = null; // Prevent the auto-reconnect from triggering when we manually close it
       wsRef.current.close();
     }
 
@@ -32,10 +33,12 @@ export function useWebSocket() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}?token=${token}`;
 
-    wsRef.current = new WebSocket(wsUrl); // Initialize WS
+    const socket = new WebSocket(wsUrl);
+    wsRef.current = socket; // Initialize WS
 
     // EVENT: Connection established
-    wsRef.current.onopen = () => {
+    socket.onopen = () => {
+      if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
       console.log("Websocket connected✅");
       setIsConnected(true);
 
@@ -46,7 +49,9 @@ export function useWebSocket() {
     };
 
     // EVENT: Server sent a message
-    wsRef.current.onmessage = (event) => {
+    socket.onmessage = (event) => {
+      if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
+
       try {
         const data = JSON.parse(event.data);
         handleIncomingMessage(data);
@@ -55,12 +60,16 @@ export function useWebSocket() {
       }
     };
 
-    wsRef.current.onerror = (error) => {
+    socket.onerror = (error) => {
+      if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
+
       console.error("Failed to parse WebSocket error:", error);
     };
 
     // Event: Connection Lost
-    wsRef.current.onclose = () => {
+    socket.onclose = () => {
+      if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
+
       console.log("Websocket disconnected ❌");
       setIsConnected(false);
 
@@ -180,7 +189,7 @@ export function useWebSocket() {
   // Helper for Group Messages
   const sendGroupMessage = useCallback(
     (groupId, content) => {
-      const tempId = Date.now().toString();
+      const tempId = generateId();
       sendMessage("group_message", { groupId, content, tempId });
       return tempId;
     },
