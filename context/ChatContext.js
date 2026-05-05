@@ -47,7 +47,7 @@ export function ChatProvider({ children }) {
 
     // Handler for "Kaushik is typing..."
     const handleUserTyping = (event) => {
-      const { userId, isTyping } = event.detail;
+      const { userId, groupId, isTyping } = event.detail;
 
       // If it's a group, we create a unique key so multiple group indicators can show
       const typingKey = groupId ? `${groupId}_${userId}` : userId;
@@ -76,6 +76,9 @@ export function ChatProvider({ children }) {
     return () => {
       window.removeEventListener("userStatusUpdate", handleStatusUpdate);
       window.removeEventListener("userTyping", handleUserTyping);
+
+      // Clean up all timers on unmount to prevent memory leaks
+      Object.values(typingTimersRef.current).forEach(clearTimeout);
     };
   }, []);
 
