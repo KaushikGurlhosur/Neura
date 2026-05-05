@@ -1,5 +1,5 @@
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 // Create the context Object
 const ChatContext = createContext();
@@ -17,6 +17,9 @@ export function ChatProvider({ children }) {
   // Using a Set for onlineUsers makes lookups very fast: onlineUsers.has(userId)
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [typingUsers, setTypingUsers] = useState({}); // Format: { userId: true/false }
+
+  // We use a Ref to store timeout IDs so they persist without triggering re-renders
+  const typingTimersRef = useRef({});
 
   // Initialize the WebSocket hook inside the context
   const websocket = useWebSocket();
@@ -45,13 +48,22 @@ export function ChatProvider({ children }) {
     // Handler for "Kaushik is typing..."
     const handleUserTyping = (event) => {
       const { userId, isTyping } = event.detail;
+
+      // If it's a group, we create a unique key so multiple group indicators can show
+      const typingKey = groupId ? `${groupId}_${userId}` : userId;
+
       setTypingUsers((prev) => ({ ...prev, [userId]: isTyping }));
 
       // SAFETY: If a user's browser crashes while typing, the server might not
       // send an "isTyping: false". We clear it manually after 2 seconds.
       if (isTyping) {
-        setTimeout(() => {
+        if (typingTimersRef.current[typingKey]) {
+          clearTimeout(typingTimersRef.current[typingKey]);
+        }
+
+        typingTimersRef.current[typingKey] = setTimeout(() => {
           setTypingUsers((prev) => ({ ...prev, [userId]: false }));
+          delete typingTimersRef.current[typingKey];
         }, 2000);
       }
     };
