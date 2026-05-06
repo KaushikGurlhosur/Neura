@@ -29,7 +29,22 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, users });
   } catch (error) {
-    console.error("Error fetching users: ", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error fetching users: ", error); // 2. CHANGE: Check for specific JWT verification failures
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError"
+    ) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid or expired token" },
+        { status: 401 },
+      );
+    }
+
+    // 3. CHANGE: Use a generic message for all other errors (500)
+    // Never return 'error.message' here as it can leak database details
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
