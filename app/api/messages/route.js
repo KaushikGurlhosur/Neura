@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import Message from "@/lib/models/Message";
 
 export async function GET(request) {
   try {
@@ -30,18 +31,22 @@ export async function GET(request) {
 
     // We search for messages where:
     // (Sender is ME AND Receiver is THEM) OR (Sender is THEM AND Receiver is ME)
-    const messages = await Message.find({
-      chatType: "User",
-      $or: [
-        { sender: decoded.userId, receiver: otherUserId },
-        { sender: otherUserId, receiver: decoded.userId },
-      ],
-      isDeleted: false,
-    })
-      .populate("sender", "name username avatar")
-      .populate("receiver", "name username avatar")
-      .sort({ createdAt: 1 }) // Chronological order (oldest to newest)
-      .limit(limit);
+
+    const messages = (
+      await Message.find({
+        chatType: "User",
+        $or: [
+          { sender: decoded.userId, receiver: otherUserId },
+          { sender: otherUserId, receiver: decoded.userId },
+        ],
+        isDeleted: false,
+      })
+        .populate("sender", "name username avatar")
+        .populate("receiver", "name username avatar")
+
+        .sort({ createdAt: -1 }) // newest first so limit keeps the most recent
+        .limit(limit)
+    ).reverse(); // present oldest → newest to the client
 
     return NextResponse.json({ success: true, messages });
   } catch (error) {
