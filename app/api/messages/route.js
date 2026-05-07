@@ -14,7 +14,19 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const otherUserId = searchParams.get("userId"); // The person you clicked on to view messages
-    const limit = parseInt(searchParams.get("limit") || "50");
+    if (!otherUserId) {
+      return NextResponse.json(
+        { error: "userId query parameter is required" },
+        { status: 400 },
+      );
+    }
+
+    const MAX_LIMIT = 100;
+    const rawLimit = parseInt(searchParams.get("limit") ?? "50", 10);
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0
+        ? Math.min(rawLimit, MAX_LIMIT)
+        : 50;
 
     // We search for messages where:
     // (Sender is ME AND Receiver is THEM) OR (Sender is THEM AND Receiver is ME)
@@ -24,7 +36,7 @@ export async function GET(request) {
         { sender: decoded.userId, receiver: otherUserId },
         { sender: otherUserId, receiver: decoded.userId },
       ],
-      isDeleted: false, //
+      isDeleted: false,
     })
       .populate("sender", "name username avatar")
       .populate("receiver", "name username avatar")
