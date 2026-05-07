@@ -45,7 +45,7 @@ export async function POST(request) {
 
     const { name, memberIds, avatar, requiresApproval } = await request.json();
 
-    if (!name || !memberIds || memberIds.length === 0) {
+    if (!name || !Array.isArray(memberIds) || memberIds.length === 0) {
       return NextResponse.json(
         {
           error: "Group name and members are required",
@@ -53,6 +53,10 @@ export async function POST(request) {
         { status: 400 },
       );
     }
+
+    const uniqueMembersIds = [...new Set(memberIds.map(String))].filter(
+      (id) => id !== String(decoded.userId),
+    );
 
     // Construct the membership list
     // The creator is automatically added as an admin.
@@ -62,7 +66,7 @@ export async function POST(request) {
         role: "admin",
         joinedAt: new Date(),
       },
-      ...memberIds.map((id) => ({
+      ...uniqueMembersIds.map((id) => ({
         user: id,
         role: "member",
         joinedAt: new Date(),
@@ -81,6 +85,10 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, group });
   } catch (error) {
+    console.error("Group Creation Error: ", error);
+    if (error.name === "JsonWebTokenError") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
