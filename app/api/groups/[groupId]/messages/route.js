@@ -16,6 +16,10 @@ export async function GET(request, { params }) {
 
     const { groupId } = await params;
 
+    if (!/^[a-f\d]{24}$/i.test(groupId)) {
+      return NextResponse.json({ error: "Invalid groupId" }, { status: 400 });
+    }
+
     // SECURITY CHECK:
     // Don't just fetch messages—ensure the person asking is actually in the group!
     const group = await Group.findOne({
