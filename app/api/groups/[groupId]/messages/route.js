@@ -2,14 +2,19 @@ import dbConnect from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import Group from "@/lib/models/Group";
+import Message from "@/lib/models/Message";
 
 export async function GET(request, { params }) {
   try {
     await dbConnect();
     const token = request.cookies.get("token")?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const { groupId } = params;
+    const { groupId } = await params;
 
     // SECURITY CHECK:
     // Don't just fetch messages—ensure the person asking is actually in the group!
