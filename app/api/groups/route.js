@@ -13,7 +13,7 @@ export async function GET(request) {
     }
 
     // Decode token to get user ID
-    const decoded = jwt.verify(token, process.env.JWT_SECERET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Find any group where the "members" array contains an object with out user ID
     const groups = await Group.find({
