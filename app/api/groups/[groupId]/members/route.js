@@ -16,8 +16,16 @@ export async function GET(request, { params }) {
     if (!token)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { groupId } = params;
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      );
+    }
+    const { groupId } = await params;
 
     // Security check: Find the group and ensure the person asking is a member.
     // We populate the 'user' field within the members array to get their profile details.
@@ -35,7 +43,11 @@ export async function GET(request, { params }) {
       members: group.members,
     });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error in GET /api/groups/[groupId]/members:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred" },
+      { status: 500 },
+    );
   }
 }
 
@@ -47,8 +59,20 @@ export async function POST(request, { params }) {
   try {
     await dbConnect();
     const token = request.cookies.get("token")?.value;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { groupId } = params;
+
+    if (!token)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      );
+    }
+    const { groupId } = await params;
     const { memberIds } = await request.json(); // Array of User IDs to add
 
     if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
@@ -115,7 +139,11 @@ export async function POST(request, { params }) {
       message: `${newMembers.length} member(s) added successfully`,
     });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error in POST /api/groups/[groupId]/members:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred" },
+      { status: 500 },
+    );
   }
 }
 
@@ -127,9 +155,33 @@ export async function PUT(request, { params }) {
   try {
     await dbConnect();
     const token = request.cookies.get("token")?.value;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { groupId } = params;
+
+    if (!token)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      );
+    }
+    const { groupId } = await params;
     const { memberId, role } = await request.json();
+
+    if (!role || !["admin", "moderator", "member"].includes(role)) {
+      return NextResponse.json(
+        { error: "Invalid role. Must be admin, moderator, or member" },
+        { status: 400 },
+      );
+    }
+
+    const { Types } = await import("mongoose");
+    if (!memberId || !Types.ObjectId.isValid(memberId)) {
+      return NextResponse.json({ error: "Invalid member ID" }, { status: 400 });
+    }
 
     // Check if the current user is the "Super Admin" of the group
     const group = await Group.findOne({
@@ -166,7 +218,11 @@ export async function PUT(request, { params }) {
       message: `Role updated to ${role}`,
     });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error in PUT /api/groups/[groupId]/members:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred" },
+      { status: 500 },
+    );
   }
 }
 
@@ -178,9 +234,36 @@ export async function DELETE(request, { params }) {
   try {
     await dbConnect();
     const token = request.cookies.get("token")?.value;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { groupId } = params;
+
+    if (!token)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      );
+    }
+    const { groupId } = await params;
     const memberId = new URL(request.url).searchParams.get("memberId");
+
+    if (!memberId) {
+      return NextResponse.json(
+        { error: "memberId is required" },
+        { status: 400 },
+      );
+    }
+
+    const { Types } = await import("mongoose");
+    if (!Types.ObjectId.isValid(memberId)) {
+      return NextResponse.json(
+        { error: "Invalid member ID format" },
+        { status: 400 },
+      );
+    }
 
     const group = await Group.findById(groupId);
     if (!group)
@@ -228,6 +311,10 @@ export async function DELETE(request, { params }) {
       message: isSelfLeave ? "Left group" : "Member removed",
     });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error in DELETE /api/groups/[groupId]/members:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred" },
+      { status: 500 },
+    );
   }
 }
