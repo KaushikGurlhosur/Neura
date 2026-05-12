@@ -53,3 +53,61 @@ export async function GET(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+// POST message
+export async function POST(request) {
+  try {
+    await dbConnect();
+
+    const token = request.cookies.get("token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Parse the body from ChatWindow.js
+    const body = await request.json();
+    const { receiverId, content } = body;
+
+    if (!receiverId || !content) {
+      return NextResponse.json(
+        { error: "Missing receiverId or content" },
+        { status: 400 },
+      );
+    }
+
+    // 1. Create message in MongoDB
+    const newMessage = await Message.create({
+      chatType: "User",
+      sender: decoded.userId,
+      receiver: receiverId,
+      content: content.trim(),
+      status: "sent",
+    });
+
+    // 2. Populate sender so frontend has user details (avatar, name)
+    const populatedMessage = await newMessage.populate(
+      "sender",
+      "name username avatar",
+    );
+
+    // 3. RETURN JSON (This prevents the SyntaxError)
+    return NextResponse.json({ success: true, message: populatedMessage });
+  } catch (error) {
+    console.error("POST Message Error:", error);
+
+    // Handle JWT errors specifically
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError"
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
+}

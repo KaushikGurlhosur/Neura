@@ -25,14 +25,15 @@ const handle = app.getRequestHandler();
  * app.prepare() starts the Next.js compiler/builder.
  * This is an 'Async' operation, so we use .then() to wait for it to finish.
  */
-app.prepare()
+app
+  .prepare()
   .then(() => {
     // 1. Create the base Node.js HTTP Server
     // This server will receive EVERY request (Web pages, APIs, and WebSockets)
     const server = createServer(async (req, res) => {
       try {
         const parsedUrl = parse(req.url, true);
-        
+
         // Hand the request over to Next.js to do its magic
         await handle(req, res, parsedUrl);
       } catch (err) {
@@ -57,7 +58,9 @@ app.prepare()
      */
     server.on("error", (err) => {
       if (err.code === "EADDRINUSE") {
-        console.error(`❌ Port ${port} is already in use. Please close the other app.`);
+        console.error(
+          `❌ Port ${port} is already in use. Please close the other app.`,
+        );
       } else {
         console.error("❌ Server Error:", err);
       }
@@ -71,10 +74,10 @@ app.prepare()
     server.listen(port, () => {
       console.log(
         `\n🚀 Neura Engine Online` +
-        `\n------------------------` +
-        `\nMode:  ${dev ? "Development" : "Production"}` +
-        `\nURL:   http://${hostname}:${port}` +
-        `\nSocket: ${dev ? "ws" : "wss"}://${hostname}:${port}\n`
+          `\n------------------------` +
+          `\nMode:  ${dev ? "Development" : "Production"}` +
+          `\nURL:   http://${hostname}:${port}` +
+          `\nSocket: ${dev ? "ws" : "wss"}://${hostname}:${port}\n`,
       );
     });
   })
