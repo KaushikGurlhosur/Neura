@@ -11,7 +11,7 @@ const UserIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
-    className="w-full h-full">
+    className="w-5 h-full">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
   </svg>
@@ -35,7 +35,7 @@ const LockIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
-    className="w-full h-full">
+    className="w-5 h-full">
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
     <path d="M7 11V7a5 5 0 0110 0v4" />
   </svg>
@@ -109,8 +109,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-[#e0e5ec]">
-      <div>
+    <div className="flex justify-center items-center min-h-screen bg-[#e0e5ec] ">
+      <div className="bg-[#e0e5ec] rounded-4xl shadow-[20px_20px_60px_#bec3cf,-20px_-20px_60px_#ffffff] max-w-lg w-full p-5">
         <div className="flex flex-col items-center">
           <h2 className="text-[#3d4468] font-extrabold text-3xl mb-2.5">
             Welcome Back
@@ -126,12 +126,13 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form>
-          <div>
-            <div>
+        <form className="p-4 m-2">
+          <div className="relative mb-5">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
               <UserIcon />
             </div>
             <input
+              className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-[16px] outline-none"
               type="email"
               placeholder="Email Address"
               value={form.email}
@@ -140,11 +141,12 @@ export default function LoginPage() {
             />
           </div>
 
-          <div>
-            <div>
+          <div className="relative mb-5">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
               <LockIcon />
             </div>
             <input
+              className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-[16px] outline-none"
               type="password"
               placeholder="Password"
               value={form.password}
@@ -152,13 +154,18 @@ export default function LoginPage() {
               required
             />
           </div>
-          <button type="submit" disabled={isloading}>
+          <button
+            type="submit"
+            disabled={isloading}
+            className="w-full bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-[10px] transition-all duration-200 ease-in-out">
             {isloading ? "Authenticating..." : "Login"}
           </button>
         </form>
 
-        <div>
-          <p>Don't have an account? </p>
+        <div className="flex items-center justify-center mt-8">
+          <p className="text-[#9499b7] text-base">
+            Don't have an account?&nbsp;
+          </p>
           <Link
             href="/register"
             className="text-[#3d4468] font-bold decoration-0 ">
