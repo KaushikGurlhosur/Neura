@@ -100,13 +100,43 @@ const TwitterIcon = () => (
 export default function LoginPage() {
   const [form, setForm] = useState({
     userName: "",
-    email: "",
+    identifier: "",
     phoneNumber: "",
     password: "",
   });
   const router = useRouter();
   const [isloading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // CHANGE: We use a standard fetch to your custom login endpoint
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      // If successful, your backend should have set the "token" cookie
+      // So we just redirect to the dashboard/home
+      router.push("/");
+      router.refresh(); // Forces Next.js to re-check the cookies
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-[#e0e5ec] ">
@@ -126,7 +156,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form className="p-4 m-2">
+        <form onSubmit={handleLogin} className="p-4 m-2">
           <div className="relative mb-5">
             <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
               <UserIcon />
@@ -135,8 +165,8 @@ export default function LoginPage() {
               className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-[16px] outline-none"
               type="email"
               placeholder="Email Address"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              value={form.identifier}
+              onChange={(e) => setForm({ ...form, identifier: e.target.value })}
               required
             />
           </div>
