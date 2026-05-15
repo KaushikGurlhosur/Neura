@@ -140,12 +140,12 @@ export default function LoginPage() {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-[#e0e5ec] ">
-      <div className="bg-[#e0e5ec] rounded-4xl shadow-[20px_20px_60px_#bec3cf,-20px_-20px_60px_#ffffff] max-w-lg w-full p-5">
+      <div className="bg-[#e0e5ec] rounded-4xl shadow-[20px_20px_60px_#bec3cf,-20px_-20px_60px_#ffffff] max-w-[320px] sm:w-sm md:w-lg w-full p-3 md:p-5">
         <div className="flex flex-col items-center">
           <h2 className="text-[#3d4468] font-extrabold text-3xl mb-2.5">
             Welcome Back
           </h2>
-          <p className="text-[#9499b7]">
+          <p className="text-[#9499b7] mb-2">
             Enter your credentials to access Neura
           </p>
         </div>
@@ -187,7 +187,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isloading}
-            className="w-full bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-[10px] transition-all duration-200 ease-in-out">
+            className="w-full bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-4 transition-all duration-200 ease-in-out">
             {isloading ? "Authenticating..." : "Login"}
           </button>
         </form>
