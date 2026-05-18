@@ -109,6 +109,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [isloading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async (e) => {
     e.preventDefault();
