@@ -1,7 +1,7 @@
 import Users from "@/lib/models/Users";
 import dbConnect from "@/lib/mongodb";
+import { sendVerificationOTP } from "@/utils/otp";
 import { NextResponse } from "next/server";
-import { sendVerificationOTP } from "@/lib/utils/otp";
 
 export async function POST(request) {
   try {
