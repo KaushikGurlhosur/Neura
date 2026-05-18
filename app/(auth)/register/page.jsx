@@ -110,7 +110,7 @@ export default function RegisterPage() {
   const [isloading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
+  const [showModal, setShowModal] = useState(false);
   const handleRegister = async (e) => {
     e.preventDefault();
     setIsLoading(true);
