@@ -140,12 +140,12 @@ export default function LoginPage() {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-[#e0e5ec] ">
-      <div className="bg-[#e0e5ec] rounded-4xl shadow-[20px_20px_60px_#bec3cf,-20px_-20px_60px_#ffffff] max-w-[320px] sm:w-sm md:w-lg w-full p-3 md:p-5">
+      <div className="bg-[#e0e5ec] rounded-4xl shadow-[20px_20px_60px_#bec3cf,-20px_-20px_60px_#ffffff] w-[320px] sm:w-sm md:w-lg p-3 md:p-5">
         <div className="flex flex-col items-center">
-          <h2 className="text-[#3d4468] font-extrabold text-3xl mb-2.5">
+          <h2 className="text-[#3d4468] font-extrabold text-xl sm:text-2xl md:text-3xl mb-2.5">
             Welcome Back
           </h2>
-          <p className="text-[#9499b7] mb-2">
+          <p className="text-[#9499b7] text-sm sm:text-base md:text-lg mb-2">
             Enter your credentials to access Neura
           </p>
         </div>
@@ -162,7 +162,7 @@ export default function LoginPage() {
               <UserIcon />
             </div>
             <input
-              className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-[16px] outline-none"
+              className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
               type="email"
               placeholder="Email Address"
               value={form.identifier}
@@ -176,7 +176,7 @@ export default function LoginPage() {
               <LockIcon />
             </div>
             <input
-              className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-[16px] outline-none"
+              className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
               type="password"
               placeholder="Password"
               value={form.password}
@@ -187,18 +187,18 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isloading}
-            className="w-full bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-4 transition-all duration-200 ease-in-out">
+            className="w-full text-sm sm:text-base md:text-lg bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-4 transition-all duration-200 ease-in-out">
             {isloading ? "Authenticating..." : "Login"}
           </button>
         </form>
 
         <div className="flex items-center justify-center mt-8">
-          <p className="text-[#9499b7] text-base">
-            Don't have an account?&nbsp;
+          <p className="text-[#9499b7] text-sm sm:text-base md:text-lg">
+            Don&apos;t have an account?&nbsp;
           </p>
           <Link
             href="/register"
-            className="text-[#3d4468] font-bold decoration-0 ">
+            className="text-[#3d4468] font-bold text-sm sm:text-base md:text-lg decoration-0 ">
             Sign Up
           </Link>
         </div>
