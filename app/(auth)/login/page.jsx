@@ -194,7 +194,7 @@ export default function LoginPage() {
 
         <div className="flex items-center justify-center mt-8">
           <p className="text-[#9499b7] text-sm sm:text-base md:text-lg">
-            Don't have an account?&nbsp;
+            Don&apos;t have an account?&nbsp;
           </p>
           <Link
             href="/register"
