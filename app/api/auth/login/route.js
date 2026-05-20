@@ -137,7 +137,7 @@ export async function POST(request) {
     response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "lax", // reduces CSRF risk
       maxAge: 7 * 24 * 60 * 60,
       path: "/", // Cookie available across the entire site
     });
