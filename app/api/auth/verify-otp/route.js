@@ -81,13 +81,15 @@ export async function POST(request) {
       token,
     });
 
-    return response.cookies.set("token", token, {
+    response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict", // strictly send token with same site request (reduces CSRF risk)
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: "/", // makes it available for entire application
     });
+
+    return response;
   } catch (error) {
     console.error("OTP verification error: ", error.message);
     return NextResponse.json(
