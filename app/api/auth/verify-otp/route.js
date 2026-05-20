@@ -74,12 +74,22 @@ export async function POST(request) {
     // Cleaning response to avoid sending sensitive info
     const { password, ...userResponse } = updatedUser.toObject();
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Welcome to Neura! Account verified and 50 credits granted.",
       user: userResponse,
       token,
     });
+
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict", // strictly send token with same site request (reduces CSRF risk)
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+      path: "/", // makes it available for entire application
+    });
+
+    return response;
   } catch (error) {
     console.error("OTP verification error: ", error.message);
     return NextResponse.json(
