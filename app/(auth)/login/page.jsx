@@ -187,7 +187,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isloading}
-            className="w-full text-sm sm:text-base md:text-lg bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-4 transition-all duration-200 ease-in-out">
+            className="w-full text-sm sm:text-base md:text-lg bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-4 transition-all duration-200 ease-in-out tracking-widest">
             {isloading ? "Authenticating..." : "Login"}
           </button>
         </form>

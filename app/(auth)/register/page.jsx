@@ -293,13 +293,14 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-[#e0e5ec] ">
+    <div className="flex justify-center items-center min-h-[130dvh] md:min-h-dvh bg-[#e0e5ec] ">
       <div className="bg-[#e0e5ec] rounded-4xl shadow-[20px_20px_60px_#bec3cf,-20px_-20px_60px_#ffffff] w-[320px] sm:w-sm md:w-2xl p-3 md:p-5">
         <div className="flex flex-col justify-center items-center">
           <h2 className="text-[#3d4468] font-extrabold text-xl sm:text-2xl md:text-3xl mb-2.5">
             Create an Account
           </h2>
-          <p className="text-[#9499b7] text-sm sm:text-base md:text-lg mb-2">
+
+          <p className="text-[#9499b7] text-center text-sm sm:text-base md:text-lg mb-2">
             Join Neura to access advanced real-time communication lines
           </p>
         </div>
