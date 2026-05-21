@@ -198,7 +198,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError("");
 
-    if (form.password === form.confirmPassword) {
+    if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
