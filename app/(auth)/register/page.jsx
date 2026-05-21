@@ -105,6 +105,7 @@ export default function RegisterPage() {
     name: "",
     username: "",
     password: "",
+    confirmPassword: "",
     email: "",
     phoneNumber: "",
     bio: "",
@@ -117,6 +118,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [message, setMessage] = useState("");
+  const [passwordWarning, setPasswordWarning] = useState("");
 
   // Input structural notification flags
   const [warnings, setWarnings] = useState({
@@ -151,6 +153,19 @@ export default function RegisterPage() {
     return () => clearTimeout(delay);
   }, [form.phoneNumber]);
 
+  useEffect(() => {
+    if (!form.confirmPassword) {
+      setPasswordWarning("");
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setPasswordWarning("Password does not match");
+    } else {
+      setPasswordWarning("");
+    }
+  }, [form.password, form.confirmPassword]);
+
   const checkExistingUser = async (field, value) => {
     try {
       const res = await fetch("/api/auth/check-exists", {
@@ -183,12 +198,18 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError("");
 
+    if (form.password === form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     try {
+      const { confirmPassword, ...payload } = form;
       // CHANGE: We use a standard fetch to your custom login endpoint
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -273,7 +294,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-[#e0e5ec] ">
-      <div className="bg-[#e0e5ec] rounded-4xl shadow-[20px_20px_60px_#bec3cf,-20px_-20px_60px_#ffffff] w-[320px] sm:w-sm md:w-xl p-3 md:p-5">
+      <div className="bg-[#e0e5ec] rounded-4xl shadow-[20px_20px_60px_#bec3cf,-20px_-20px_60px_#ffffff] w-[320px] sm:w-sm md:w-2xl p-3 md:p-5">
         <div className="flex flex-col justify-center items-center">
           <h2 className="text-[#3d4468] font-extrabold text-xl sm:text-2xl md:text-3xl mb-2.5">
             Create an Account
@@ -289,128 +310,185 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="p-4 m-2 space-y-4">
-          <div>
-            <div className="relative mb-5">
-              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
-                <UserIcon />
-              </div>
-              <input
-                className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] p-4 pl-12 shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
-                type="text"
-                placeholder="Full Name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="relative mb-5">
-              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
-                <UserIcon />
-              </div>
-              <input
-                className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] p-4 pl-12 shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
-                type="text"
-                placeholder="User Name"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                required
-              />
-            </div>
-            {warnings.username && (
-              <p className="text-red-500 font-extralight text-xs sm:text-sm mt-1.5 pl-2">
-                {warnings.username}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <div className="relative mb-5">
-              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
-                <EmailIcon />
-              </div>
-              <input
-                className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] p-4 pl-12 shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
-                type="email"
-                placeholder="Email Address"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-              />
-            </div>
-            {warnings.email && (
-              <p className="text-red-500 font-extralight text-xs sm:text-sm mt-1.5 pl-2">
-                {warnings.email}
-              </p>
-            )}
-          </div>
-          <div>
-            <div className="relative mb-5">
-              {/* <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
-                <UserIcon />
-              </div> */}
-              <div
-                className="
-        w-full bg-[#e0e5ec]
-        rounded-[15px]
-        shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff]
-        pl-5 pr-4 py-4
-      ">
-                <PhoneInput
-                  className="text-[#3d4468]"
-                  international
-                  defaultCountry="IN"
-                  value={form.phoneNumber}
-                  onChange={(value) => {
-                    if (!value) {
-                      setForm({ ...form, phoneNumber: "" });
-                      return;
-                    }
-                    // limit to 15 digits (E.164 international standard)
-                    if (value.length <= 15) {
-                      setForm({
-                        ...form,
-                        phoneNumber: value || "",
-                      });
-                    }
-                  }}
+        <form
+          onSubmit={handleRegister}
+          className="p-4 m-2 space-y-2.5 md:space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-4 space-y-2.5 md:-space-y-2.5">
+            <div>
+              <div className="relative ">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
+                  <UserIcon />
+                </div>
+                <input
+                  className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] p-4 pl-12 shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
+                  type="text"
+                  placeholder="Full Name"
+                  maxLength={30}
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                   required
-                  numberInputProps={{
-                    maxLength: 18,
-                  }}
-                  countryCallingCodeEditable={false}
                 />
               </div>
             </div>
-            {warnings.phoneNumber && (
+
+            <div>
+              <div className="relative ">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
+                  <UserIcon />
+                </div>
+                <input
+                  className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] p-4 pl-12 shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
+                  type="text"
+                  placeholder="User Name"
+                  value={form.username}
+                  maxLength={30}
+                  onChange={(e) =>
+                    setForm({ ...form, username: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              {warnings.username && (
+                <p className="text-red-500 font-extralight text-xs sm:text-sm pl-2">
+                  {warnings.username}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-4 space-y-2.5 md:-space-y-2.5">
+            <div>
+              <div className="relative ">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
+                  <EmailIcon />
+                </div>
+                <input
+                  className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] p-4 pl-12 shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
+                  type="email"
+                  placeholder="Email Address"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                />
+              </div>
+              {warnings.email && (
+                <p className="text-red-500 font-extralight text-xs sm:text-sm mt-1.5 pl-2">
+                  {warnings.email}
+                </p>
+              )}
+            </div>
+            <div>
+              <div className="relative ">
+                {/* <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
+                <UserIcon />
+              </div> */}
+                <div
+                  className="
+        w-full bg-[#e0e5ec]
+        rounded-[15px]
+        shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff]
+        pl-5 pr-4 py-4 md:h-16
+      ">
+                  <PhoneInput
+                    className="text-[#3d4468]"
+                    international
+                    defaultCountry="IN"
+                    value={form.phoneNumber}
+                    onChange={(value) => {
+                      if (!value) {
+                        setForm({ ...form, phoneNumber: "" });
+                        return;
+                      }
+                      // limit to 15 digits (E.164 international standard)
+                      if (value.length <= 15) {
+                        setForm({
+                          ...form,
+                          phoneNumber: value || "",
+                        });
+                      }
+                    }}
+                    required
+                    numberInputProps={{
+                      maxLength: 18,
+                    }}
+                    countryCallingCodeEditable={false}
+                  />
+                </div>
+              </div>
+              {warnings.phoneNumber && (
+                <p className="text-red-500 font-extralight text-xs sm:text-sm mt-1.5 pl-2">
+                  {warnings.phoneNumber}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-sm sm:text-base md:text-lg text-[#9499b7]">
+              Bio
+            </div>
+            <textarea
+              className="w-full h-20 bg-[#e0e5ec] border-none rounded-[15px] px-[24px] py-[20px] pl-17 shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none placeholder:text-[#9499b7] resize-none scrollbar-hide"
+              placeholder="Hey there! I'm new to Neura"
+              value={form.bio}
+              minLength={10}
+              maxLength={140}
+              onChange={(e) => setForm({ ...form, bio: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <div className="relative">
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
+                <LockIcon />
+              </div>
+              <input
+                className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
+                type="password"
+                placeholder="Password"
+                value={form.password}
+                minLength={10}
+                maxLength={24}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          {/* confirm password */}
+          <div>
+            <div className="relative ">
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
+                <LockIcon />
+              </div>
+              <input
+                className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
+                type="password"
+                placeholder="Confirm Password"
+                value={form.confirmPassword}
+                minLength={10}
+                maxLength={24}
+                onChange={(e) =>
+                  setForm({ ...form, confirmPassword: e.target.value })
+                }
+                required
+              />
+            </div>
+            {passwordWarning && (
               <p className="text-red-500 font-extralight text-xs sm:text-sm mt-1.5 pl-2">
-                {warnings.phoneNumber}
+                {passwordWarning}
               </p>
             )}
           </div>
 
-          <div className="relative mb-5">
-            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
-              <LockIcon />
-            </div>
-            <input
-              className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-            />
+          <div className="flex justify-center">
+            <button
+              type="submit"
+              disabled={isloading}
+              className="w-2/3 tracking-widest bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-4 transition-all duration-200 ease-in-out">
+              {isloading ? "Authenticating..." : "Register"}
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={isloading}
-            className="w-full bg-[#e0e5ec] border-none rounded-[15px] p-[18px] text-[#3d4468] font-semibold shadow-[8px_8px_20px_#bec3cf,-8px_-8px_20px_#ffffff] cursor-pointer mt-4 transition-all duration-200 ease-in-out">
-            {isloading ? "Authenticating..." : "Register"}
-          </button>
         </form>
 
         <div className="flex items-center justify-center mt-8">
