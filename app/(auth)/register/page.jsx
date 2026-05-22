@@ -503,6 +503,80 @@ export default function RegisterPage() {
           </Link>
         </div>
       </div>
+
+      {/* Verification  Security Modal view */}
+      {showModal && (
+        <div className="absolute inset-0 z-50 flex justify-center items-center bg-black/10 backdrop-blur-sm transition-opacity ease-in duration-1000">
+          <div className="bg-[#e0e5ec] rounded-4xl shadow-[25px_25px_75px_#a3a8b4,-25px_-25px_75px_#ffffff] max-w-md w-full p-8 mx-4 text-center">
+            <h3 className="text-[#3d4468] font-extrabold text-xl sm:text-2xl md:text-3xl mb-2">
+              Verify Security Code
+            </h3>
+            <p className="text-[#9499b7] text-sm sm:text-base md:text-lg mb-6">
+              Enter the 6 digit code sent to {form?.email}
+            </p>
+
+            {message && (
+              <p className="text-[#2ecc71] text-sm sm:text-base md:text-lg font-medium mb-4">
+                {message}
+              </p>
+            )}
+            {error && (
+              <p className="text-[#e74c3c] text-sm sm:text-base md:text-lg font-medium mb-4">
+                {error}
+              </p>
+            )}
+
+            {/* Development Mock Backup Parameter Frame */}
+            {devOTP && (
+              <div className="mb-6 bg-[#f8f9fa] p-3 rounded-xl border border-dashed border-[#bec3cf]">
+                <p className="text-sm sm:text-base md:text-lg text-[#7f8c8d] tracking-widest uppercase font-bold">
+                  Dev Sandbox System Token
+                </p>
+                <p className="text-2xl font-mono font-black tracking-widest text-[#2c3e50] mt-1">
+                  {devOTP}
+                </p>
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyOTP} className="space-y-5">
+              <div className="relative">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9499b7]">
+                  <LockIcon />
+                </div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  placeholder="Enter OTP"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="w-full bg-[#e0e5ec] border-none rounded-xl h-14 text-center font-extrabold text-2xl shadow-[inset_6px_6px_12px_#bec3cf,inset_-6px_-6px_12px_#ffffff] text-[#3d4468] outline-none tracking-widest"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isloading}
+                className="w-full bg-[#e0e5ec] font-bold border-none rounded-[15px] p-4 text-[#3d4468] shadow-[6px_6px_15px_#bec3cf,-6px_-6px_15px_#ffffff] active:shadow-[inset_4px_4px_8px_#bec3cf,inset_-4px_-4px_8px_#ffffff] cursor-pointer transition-all duration-200 tracking-wider">
+                {isloading ? "Authenticating Account..." : "Verify & Finalize"}
+              </button>
+            </form>
+
+            <div className="flex flex-col items-center justify-center mt-6 space-y-2">
+              <button
+                onClick={handleResendOTP}
+                className="text-[#3d4468] text-sm font-semibold hover:underline">
+                Resend Code
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-[#9499b7] text-xs hover:underline">
+                Cancel & edit fields
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
