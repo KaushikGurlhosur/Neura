@@ -506,7 +506,7 @@ export default function RegisterPage() {
 
       {/* Verification  Security Modal view */}
       {showModal && (
-        <div className="absolute inset-0 z-50 flex justify-center items-center bg-black/10 backdrop-blur-sm transition-opacity ease-in duration-1000">
+        <div className="absolute h-[130dvh] inset-0 z-50 flex justify-center items-center bg-black/10 backdrop-blur-sm transition-opacity ease-in duration-1000">
           <div className="bg-[#e0e5ec] rounded-4xl shadow-[25px_25px_75px_#a3a8b4,-25px_-25px_75px_#ffffff] max-w-md w-full p-8 mx-4 text-center">
             <h3 className="text-[#3d4468] font-extrabold text-xl sm:text-2xl md:text-3xl mb-2">
               Verify Security Code
@@ -564,9 +564,11 @@ export default function RegisterPage() {
 
             <div className="flex flex-col items-center justify-center mt-6 space-y-2">
               <button
+                type="button"
                 onClick={handleResendOTP}
+                disabled={isloading}
                 className="text-[#3d4468] text-sm font-semibold hover:underline">
-                Resend Code
+                {isloading ? "Resending OTP..." : "Resend OTP"}
               </button>
               <button
                 onClick={() => setShowModal(false)}
