@@ -1,6 +1,6 @@
 const Home = () => {
   return (
-    <div className="min-h-dvh flex items-center justify-center">
+    <div className="h-dvh flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-xl sm:text-2xl md:text-4xl  font-extrabold">
           Welcome To <span className="text-orange-400">Neura</span>
