@@ -282,6 +282,11 @@ export default function RegisterPage() {
       });
 
       const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to resend OTP");
+      }
+
       if (data.devOTP) {
         setDevOTP(data.devOTP);
       }
