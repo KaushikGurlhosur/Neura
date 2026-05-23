@@ -114,6 +114,7 @@ export default function RegisterPage() {
   const [otp, setOtp] = useState("");
   const [devOTP, setDevOTP] = useState("");
   const [isloading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -268,7 +269,7 @@ export default function RegisterPage() {
 
   const handleResendOTP = async () => {
     setMessage("Resending...");
-    setIsLoading(true);
+    setIsResending(true);
     setError("");
 
     try {
@@ -281,6 +282,11 @@ export default function RegisterPage() {
       });
 
       const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to resend OTP");
+      }
+
       if (data.devOTP) {
         setDevOTP(data.devOTP);
       }
@@ -288,7 +294,7 @@ export default function RegisterPage() {
     } catch (error) {
       setError(error.message);
     } finally {
-      setIsLoading(false);
+      setIsResending(false);
     }
   };
 
@@ -566,9 +572,9 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={handleResendOTP}
-                disabled={isloading}
+                disabled={isResending}
                 className="text-[#3d4468] text-sm font-semibold hover:underline">
-                {isloading ? "Resending OTP..." : "Resend OTP"}
+                {isResending ? "Resending OTP..." : "Resend OTP"}
               </button>
               <button
                 onClick={() => setShowModal(false)}

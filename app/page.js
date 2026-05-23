@@ -31,7 +31,7 @@ const Home = () => {
       <button
         onClick={handleLogout}
         disabled={isLoading}
-        type="submit"
+        type="button"
         className="absolute top-10 right-20 w-1/7 bg-[#e0e5ec] border-none rounded-[15px] p-4 text-[#3d4468] shadow-[6px_6px_15px_#bec3cf,-6px_-6px_15px_#ffffff] active:shadow-[inset_6px_6px_12px_#bec3cf,inset_-6px_-6px_12px_#ffffff] cursor-pointer transition-all duration-200 tracking-widest font-extrabold text-sm sm:text-lg md:text-xl">
         Logout
       </button>
