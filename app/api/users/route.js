@@ -23,9 +23,7 @@ export async function GET(request) {
     const users = await Users.find({
       _id: { $ne: currentUserId },
       isVerified: true,
-    }).select(
-      "_id name, username email phoneNumber avatar bio status lastSeen",
-    );
+    }).select("_id name username email phoneNumber avatar bio status lastSeen");
 
     return NextResponse.json({ success: true, users });
   } catch (error) {
