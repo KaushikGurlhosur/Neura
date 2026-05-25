@@ -117,6 +117,7 @@ export default function RegisterPage() {
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [message, setMessage] = useState("");
   const [passwordWarning, setPasswordWarning] = useState("");
@@ -451,7 +452,7 @@ export default function RegisterPage() {
               </div>
               <input
                 className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={form.password}
                 minLength={10}
@@ -459,6 +460,19 @@ export default function RegisterPage() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
               />
+
+              <button
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-5 top-1/2 -translate-y-1/2 transition-all duration-300 text-[#9499b7] hover:scale-110 active:scale-95">
+                <div
+                  className={`transition-all duration-400 ease-in-out ${
+                    showPassword
+                      ? "rotate-180 opacity-100"
+                      : "rotate-0 opacity-100"
+                  }`}>
+                  {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
+                </div>
+              </button>
             </div>
           </div>
 
@@ -470,7 +484,7 @@ export default function RegisterPage() {
               </div>
               <input
                 className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="Confirm Password"
                 value={form.confirmPassword}
                 minLength={10}
@@ -480,6 +494,19 @@ export default function RegisterPage() {
                 }
                 required
               />
+
+              <button
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-5 top-1/2 -translate-y-1/2 transition-all duration-300 text-[#9499b7] hover:scale-110 active:scale-95">
+                <div
+                  className={`transition-all duration-400 ease-in-out ${
+                    showConfirmPassword
+                      ? "rotate-180 opacity-100"
+                      : "rotate-0 opacity-100"
+                  }`}>
+                  {showConfirmPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
+                </div>
+              </button>
             </div>
             {passwordWarning && (
               <p className="text-red-500 font-extralight text-xs sm:text-sm mt-1.5 pl-2">

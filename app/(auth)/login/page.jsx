@@ -47,7 +47,7 @@ const EyeOpenIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
-    className="w-full h-full">
+    className="w-5 h-full">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
@@ -59,7 +59,7 @@ const EyeClosedIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
-    className="w-full h-full">
+    className="w-5 h-full">
     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
     <line x1="1" y1="1" x2="23" y2="23" />
   </svg>
@@ -107,6 +107,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [isloading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -177,12 +178,26 @@ export default function LoginPage() {
             </div>
             <input
               className="w-full bg-[#e0e5ec] border-none rounded-[15px] pt-[20px] pr-[24px] pb-[20px] pl-[50px] shadow-[inset_8px_8px_16px_#bec3cf,inset_-8px_-8px_16px_#ffffff] text-[#3d4468] text-sm sm:text-base md:text-lg outline-none"
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
             />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-5 top-1/2 -translate-y-1/2 transition-all duration-300 text-[#9499b7] hover:scale-110 active:scale-95">
+              <div
+                className={`transition-all duration-400 ease-in-out ${
+                  showPassword
+                    ? "rotate-180 opacity-100"
+                    : "rotate-0 opacity-100"
+                }`}>
+                {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
+              </div>
+            </button>
           </div>
           <button
             type="submit"
