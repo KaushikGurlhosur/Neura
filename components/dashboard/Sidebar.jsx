@@ -71,8 +71,6 @@ const Sidebar = () => {
         u.username?.toLowerCase().includes(search.toLowerCase()),
     ) || [];
 
-  console.log(filteredUsers);
-
   const filteredGroups =
     groups?.filter((g) =>
       g.name?.toLowerCase().includes(search.toLowerCase()),

@@ -26,17 +26,25 @@ export async function GET(request) {
       $or: [{ sender: currentUserId }, { receiver: currentUserId }],
     }).sort({ createdAt: -1, _id: -1 });
 
-    // Extract unique chat partner IDs
+    // // Extract unique chat partner IDs + latest message per partner in one pass
+
     const userIds = new Set();
+    const lastMessageByPartner = new Map();
+    const currentId = String(currentUserId);
 
-    messages.forEach((msg) => {
-      const otherUserId =
-        msg.sender.toString() === currentUserId
-          ? msg.receiver.toString()
-          : msg.sender.toString();
+    for (const msg of messages) {
+      const senderId = msg.sender.toString();
+      const receiverId = msg.receiver.toString();
+      const otherUserId = senderId === currentId ? receiverId : senderId;
 
+      if (otherUserId === currentId) continue;
       userIds.add(otherUserId);
-    });
+
+      // Messages is already sorted in descending order, so the first seen is the latest
+      if (!lastMessageByPartner.has(otherUserId)) {
+        lastMessageByPartner.set(otherUserId, msg); // this line saves latest message of a user
+      }
+    }
 
     // Fetch only users involved in chats
     const users = await Users.find({
@@ -46,12 +54,7 @@ export async function GET(request) {
 
     // Attach latest message for each user
     const usersWithLastMessage = users.map((user) => {
-      const lastMessage = messages.find((msg) => {
-        return (
-          msg.sender.toString() === user._id.toString() ||
-          msg.receiver.toString() === user._id.toString()
-        );
-      });
+      const lastMessage = lastMessageByPartner.get(user._id.toString() || null);
 
       return {
         ...user.toObject(),
