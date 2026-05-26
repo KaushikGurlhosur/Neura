@@ -52,6 +52,7 @@ const Sidebar = () => {
     fetchGroups,
     fetchUsers,
     createGroup,
+    currentUserId,
   } = useChat();
 
   const [search, setSearch] = useState("");
@@ -69,6 +70,8 @@ const Sidebar = () => {
         u.name?.toLowerCase().includes(search.toLowerCase()) ||
         u.username?.toLowerCase().includes(search.toLowerCase()),
     ) || [];
+
+  console.log(filteredUsers);
 
   const filteredGroups =
     groups?.filter((g) =>
@@ -193,7 +196,15 @@ const Sidebar = () => {
                       </h5>
                       <p
                         className={`text-[11px] font-medium truncate ${isTyping ? "text-[#2ecc71] font-bold animate-pulse" : "text-[#9499b7]"}`}>
-                        {isTyping ? "typing..." : `@${item.username}`}
+                        {isTyping
+                          ? "typing..."
+                          : item.lastMessage?.content
+                            ? `${
+                                item.lastMessage.sender === currentUserId
+                                  ? "You: "
+                                  : ""
+                              }${item.lastMessage.content}`
+                            : `@${item.username}`}
                       </p>
                     </div>
                   </div>
@@ -209,7 +220,6 @@ const Sidebar = () => {
           </p>
         )}
       </div>
-      <h1 className="text-black">SideBar</h1>
     </div>
   );
 };
