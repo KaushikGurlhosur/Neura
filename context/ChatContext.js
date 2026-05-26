@@ -95,9 +95,14 @@ export function ChatProvider({ children }) {
       if (data.success) {
         setUsers(data.users);
         setCurrentUserId(data.currentUserId);
+      } else {
+        setUsers([]);
+        setCurrentUserId(null);
       }
     } catch (error) {
       console.error("Error fetching users: ", error);
+      setUsers([]);
+      setCurrentUserId(null);
     }
   };
 
