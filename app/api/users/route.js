@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import Users from "@/lib/models/Users";
+import Message from "@/lib/models/Message";
 
 export async function GET(request) {
   try {
@@ -18,14 +19,58 @@ export async function GET(request) {
     const currentUserId = decoded.userId;
 
     // Fetch Users:
-    // 1. $ne (Not equal) excludes the requester
-    // 2. isVerified: true ensures we don't show unactivated accounts
+    // Get all direct messages involving current user
+
+    const messages = await Message.find({
+      chatType: "User",
+      $or: [{ sender: currentUserId }, { receiver: currentUserId }],
+    }).sort({ createdAt: -1, _id: -1 });
+
+    // Extract unique chat partner IDs
+    const userIds = new Set();
+
+    messages.forEach((msg) => {
+      const otherUserId =
+        msg.sender.toString() === currentUserId
+          ? msg.receiver.toString()
+          : msg.sender.toString();
+
+      userIds.add(otherUserId);
+    });
+
+    // Fetch only users involved in chats
     const users = await Users.find({
-      _id: { $ne: currentUserId },
+      _id: { $in: [...userIds] },
       isVerified: true,
     }).select("_id name username email phoneNumber avatar bio status lastSeen");
 
-    return NextResponse.json({ success: true, users });
+    // Attach latest message for each user
+    const usersWithLastMessage = users.map((user) => {
+      const lastMessage = messages.find((msg) => {
+        return (
+          msg.sender.toString() === user._id.toString() ||
+          msg.receiver.toString() === user._id.toString()
+        );
+      });
+
+      return {
+        ...user.toObject(),
+        lastMessage: lastMessage
+          ? {
+              _id: lastMessage._id,
+              content: lastMessage.content,
+              sender: lastMessage.sender,
+              createdAt: lastMessage.createdAt,
+            }
+          : null,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      users: usersWithLastMessage,
+      currentUserId,
+    });
   } catch (error) {
     console.error("Error fetching users: ", error); // 2. CHANGE: Check for specific JWT verification failures
     if (

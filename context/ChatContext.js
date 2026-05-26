@@ -10,6 +10,7 @@ const ChatContext = createContext();
  */
 export function ChatProvider({ children }) {
   const [users, setUsers] = useState([]); // List of all available contacts
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [groups, setGroups] = useState([]); // List of groups the user belongs to
   const [activeChat, setActiveChat] = useState(null); // The currently opened chat
 
@@ -93,6 +94,7 @@ export function ChatProvider({ children }) {
       const data = await response.json();
       if (data.success) {
         setUsers(data.users);
+        setCurrentUserId(data.currentUserId);
       }
     } catch (error) {
       console.error("Error fetching users: ", error);
@@ -149,6 +151,7 @@ export function ChatProvider({ children }) {
         fetchGroups,
         fetchUsers,
         createGroup,
+        currentUserId,
       }}>
       {children}
     </ChatContext.Provider>
