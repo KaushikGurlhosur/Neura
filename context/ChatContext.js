@@ -4,6 +4,16 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 // Create the context Object
 const ChatContext = createContext();
 
+// 🟢 ADDED: A helper function to read the user's login token from browser cookies.
+// WHY: NestJS needs this token to know WHO is connecting.
+const getCookie = (name) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+  return null;
+};
+
 /**
  * ChatProvider - The Wrapper Component
  * Wrap this around your layout so all children can access the chat state.
@@ -24,6 +34,22 @@ export function ChatProvider({ children }) {
 
   // Initialize the WebSocket hook inside the context
   const websocket = useWebSocket();
+
+  // 🟢 ADDED: This block actually turns the WebSocket ON when the app loads.
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Look for the token in cookies, fallback to localStorage just in case.
+      const token = getCookie("token") || localStorage.getItem("token");
+
+      if (token) {
+        console.log("Token found, triggering WebSocket connection...");
+        websocket.connect(token);
+      } else {
+        console.log("No token found. User is likely not logged in.");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * EVENT LISTENERS
