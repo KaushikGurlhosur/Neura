@@ -11,92 +11,23 @@ export function useWebSocket() {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
 
+  const reconnectTokenRef = useRef(null);
+  const connectRef = useRef(null);
+
   // This ref acts as a "master switch" to tell the hook whether
   // it SHOULD be trying to connect or if it should stay off.
   const shouldReconnectRef = useRef(true);
 
-  // CONNECTION LOGIC
-  const connect = useCallback((token) => {
-    if (!token) return;
+  const buildWebSocketUrl = useCallback((token) => {
+    const wsHost = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
 
-    // Reset the flag: we want to be connected now
-    shouldReconnectRef.current = true;
+    const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : "";
 
-    // If a connection already exists (even if it's currently connecting),
-    // we kill it before starting a new one to prevent duplicate sockets.
-    if (wsRef.current) {
-      wsRef.current.onclose = null; // Prevent the auto-reconnect from triggering when we manually close it
-      wsRef.current.close();
-    }
-
-    // Support both secure wss and non-secure ws connections
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}?token=${token}`;
-
-    const socket = new WebSocket(wsUrl);
-    wsRef.current = socket; // Initialize WS
-
-    // EVENT: Connection established
-    socket.onopen = () => {
-      if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
-      console.log("Websocket connected✅");
-      setIsConnected(true);
-
-      // Clear any pending reconnection timers if we successfully connect
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-    };
-
-    // EVENT: Server sent a message
-    socket.onmessage = (event) => {
-      if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
-
-      try {
-        const data = JSON.parse(event.data);
-        handleIncomingMessage(data);
-      } catch (error) {
-        console.error("Failed to parse websocket message: ", error);
-      }
-    };
-
-    socket.onerror = (error) => {
-      if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
-
-      console.error("Failed to parse WebSocket error:", error);
-    };
-
-    // Event: Connection Lost
-    socket.onclose = () => {
-      if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
-
-      console.log("Websocket disconnected ❌");
-      setIsConnected(false);
-
-      // If disconnect() was called, shouldReconnectRef.current is FALSE,
-      // so we stop right here and don't trigger the 3-second timer.
-      if (!shouldReconnectRef.current) return;
-
-      // AUTO RECONNECT: This is vital for mobile users switching between WiFi and Mobile data
-      reconnectTimeoutRef.current = setTimeout(() => {
-        console.log("Attempting to reconnect...");
-        connect(token);
-      }, 3000); // Wait 3 seconds before retrying
-    };
-  }, []); // Empty dependency array means this function only runs ONCE when the component mounts
-
-  // DISCONNECT LOGIC
-  const disconnect = useCallback(() => {
-    shouldReconnectRef.current = false; // "Don't try to come back"
-    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null; // Garbage collection
-    }
+    return `${wsHost}${tokenQuery}`;
   }, []);
 
   // INCOMING MESSAGE HANDLER
-  const handleIncomingMessage = (data) => {
+  const handleIncomingMessage = useCallback((data) => {
     switch (data.type) {
       case "new_message":
       case "group_message":
@@ -158,7 +89,102 @@ export function useWebSocket() {
       default:
         console.log("Unknown message type: ", data.type);
     }
-  };
+  }, []);
+
+  // CONNECTION LOGIC
+  const connect = useCallback(
+    (token = null) => {
+      // 🟢 CHANGED: Added Server-Side Rendering (SSR) protection.
+      // WHY: Next.js runs code on the server first. WebSockets don't exist there. This stops the app from crashing on load.
+      if (typeof window === "undefined") return;
+
+      const authToken = token || null;
+      reconnectTokenRef.current = authToken;
+
+      // Reset the flag: we want to be connected now
+      shouldReconnectRef.current = true;
+
+      // If a connection already exists (even if it's currently connecting),
+      // we kill it before starting a new one to prevent duplicate sockets.
+      if (wsRef.current) {
+        wsRef.current.onclose = null; // Prevent the auto-reconnect from triggering when we manually close it
+        wsRef.current.close();
+      }
+
+      // 🟢 CHANGED: Replaced the old "window.location.host" logic with our new URL builder.
+      // WHY: This forces the React frontend to connect to NestJS (Port 3001) instead of itself (Port 3000).
+      const wsUrl = buildWebSocketUrl(authToken);
+
+      const socket = new WebSocket(wsUrl);
+      wsRef.current = socket; // Initialize WS
+
+      // EVENT: Connection established
+      socket.onopen = () => {
+        if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
+        console.log("Websocket connected✅");
+        setIsConnected(true);
+
+        // Clear any pending reconnection timers if we successfully connect
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+      };
+
+      // EVENT: Server sent a message
+      socket.onmessage = (event) => {
+        if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
+
+        try {
+          const data = JSON.parse(event.data);
+          handleIncomingMessage(data);
+        } catch (error) {
+          console.error("Failed to parse websocket message: ", error);
+        }
+      };
+
+      socket.onerror = (error) => {
+        if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
+
+        console.error("Failed to parse WebSocket error:", error);
+      };
+
+      // Event: Connection Lost
+      socket.onclose = (event) => {
+        if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
+
+        console.log("Websocket disconnected ❌");
+        setIsConnected(false);
+
+        // If disconnect() was called, shouldReconnectRef.current is FALSE,
+        // so we stop right here and don't trigger the 3-second timer.
+        if (!shouldReconnectRef.current) return;
+
+        if (event && event.code === 1008) return;
+
+        // AUTO RECONNECT: This is vital for mobile users switching between WiFi and Mobile data
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log("Attempting to reconnect...");
+          connectRef.current?.(reconnectTokenRef.current); // Use the latest token for reconnection
+        }, 3000); // Wait 3 seconds before retrying
+      };
+    },
+    [buildWebSocketUrl, handleIncomingMessage],
+  ); // Empty dependency array means this function only runs ONCE when the component mounts
+
+  // 🟢 CHANGED: Added this useEffect to keep the connectRef updated for the timeout timer.
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  // DISCONNECT LOGIC
+  const disconnect = useCallback(() => {
+    shouldReconnectRef.current = false; // "Don't try to come back"
+    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null; // Garbage collection
+    }
+  }, []);
 
   // OUTGOING MESSAGE HELPER
   const sendMessage = useCallback((type, payload) => {
