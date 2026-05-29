@@ -128,8 +128,6 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      localStorage.setItem("token", data.token);
-
       // If successful, your backend should have set the "token" cookie
       // So we just redirect to the dashboard/home
       router.push("/");
