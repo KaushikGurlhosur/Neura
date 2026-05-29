@@ -144,7 +144,7 @@ export default function ChatArea() {
     }
 
     clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
+    typingTimeOutRef.current = setTimeout(() => {
       setIsTyping(false);
       websocket.sendTyping(activeChat._id, false);
     }, 1500); // Stop typing if no keystroke for 1.5s
@@ -176,6 +176,9 @@ export default function ChatArea() {
         body: JSON.stringify({ messageId: msgId, scope }),
       });
 
+      // 🟢 ADDED: Only update UI if the server returned a 2xx success status
+      if (!res.ok) throw new Error("Failed to delete message");
+
       websocket.setMessages((prev) =>
         prev.map((m) =>
           m._id === msgId
@@ -188,6 +191,10 @@ export default function ChatArea() {
     }
     setActiveMenuId(null);
   };
+
+  // 🟢 ADDED: Put this near the top of ChatArea.jsx, above your return statement
+  const getSenderId = (sender) =>
+    typeof sender === "object" ? sender._id : sender;
 
   return (
     <div className="flex-1 h-full bg-[#fbf2de] rounded-3xl shadow-[12px_12px_24px_#bec3cf,-12px_-12px_24px_#ffffff] flex flex-col overflow-hidden relative">
@@ -211,12 +218,12 @@ export default function ChatArea() {
               ) : (
                 <span className="text-[#9499b7]">
                   Last seen{" "}
-                  {new Date(
-                    activeChat.lastSeen || Date.now(),
-                  ).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {activeChat.lastSeen
+                    ? new Date(activeChat.lastSeen).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "recently"}
                 </span>
               )}
             </p>
@@ -251,7 +258,7 @@ export default function ChatArea() {
                   <div
                     className={`mb-2 p-2 rounded-lg text-xs opacity-80 border-l-4 ${isMe ? "bg-black/5 border-[#3d4468]" : "bg-white/30 border-[#e67e22]"}`}>
                     <p className="font-bold">
-                      {replyContext.sender === currentUserId
+                      {getSenderId(replyContext.sender) === currentUserId
                         ? "You"
                         : activeChat.name}
                     </p>

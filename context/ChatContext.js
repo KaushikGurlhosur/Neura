@@ -39,14 +39,9 @@ export function ChatProvider({ children }) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       // Look for the token in cookies, fallback to localStorage just in case.
-      const token = getCookie("token") || localStorage.getItem("token");
 
-      if (token) {
-        console.log("Token found, triggering WebSocket connection...");
-        websocket.connect(token);
-      } else {
-        console.log("No token found. User is likely not logged in.");
-      }
+      console.log("Triggering WebSocket connection...");
+      websocket.connect();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
