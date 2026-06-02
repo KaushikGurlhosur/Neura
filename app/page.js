@@ -1,4 +1,5 @@
 "use client";
+import ChatArea from "@/components/dashboard/ChatArea";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { ChatProvider } from "@/context/ChatContext";
 
@@ -34,6 +35,7 @@ const Home = () => {
     <ChatProvider>
       <div className="h-screen w-screen bg-[#e0e5ec] overflow-hidden p-3 font-sans antialiased gap-4 select-none">
         <Sidebar />
+        <ChatArea />
       </div>
     </ChatProvider>
   );
