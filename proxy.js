@@ -13,8 +13,8 @@ export async function proxy(request) {
   const isPublicRoute =
     pathname === "/login" ||
     pathname === "/register" ||
-    pathname.startsWith("/api/auth") ||
-    pathname === "/";
+    pathname.startsWith("/api/auth");
+  // pathname === "/";
 
   // ─── No token + protected route ─────────────────────
   if (!isPublicRoute && !token) {

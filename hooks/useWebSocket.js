@@ -19,7 +19,8 @@ export function useWebSocket() {
   const shouldReconnectRef = useRef(true);
 
   const buildWebSocketUrl = useCallback((token) => {
-    return process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
+    return process.env.NEXT_PUBLIC_WS_URL;
+    // return process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
   }, []);
 
   // INCOMING MESSAGE HANDLER
@@ -34,13 +35,19 @@ export function useWebSocket() {
       case "message_sent_confirm":
         // OPTIMISTIC UI: When the server confirms the message was saved.
         // We find the "tempId" message and replace it with the real DB object.
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.tempId === data.tempId
-              ? { ...msg, ...data.message, status: "sent" }
-              : msg,
-          ),
-        );
+
+        setMessages((prev) => {
+          const exists = prev.some((msg) => msg.tempId === data.tempId);
+          if (exists) {
+            return prev.map((msg) =>
+              msg.tempId === data.tempId
+                ? { ...msg, ...data.message, status: "sent" }
+                : msg,
+            );
+          }
+          // If it wasn't on screen, add it now
+          return [...prev, data.message];
+        });
         break;
 
       case "status_update":
@@ -191,42 +198,111 @@ export function useWebSocket() {
     globalThis.crypto?.randomUUID?.() ||
     `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-  // Helper for Private Messages
+  // // Helper for Private Messages
+  // const sendPrivateMessage = useCallback(
+  //   (receiverId, content, replyTo = null) => {
+  //     const tempId = generateId(); // Temporary ID for Optimistic UI
+
+  //     sendMessage("private_message", { receiverId, content, replyTo, tempId });
+  //     return tempId; // Return the tempId so that the UI can display the message immediately
+  //   },
+  //   [sendMessage],
+  // );
+
+  // // Helper for Group Messages
+  // const sendGroupMessage = useCallback(
+  //   (groupId, content) => {
+  //     const tempId = generateId();
+  //     sendMessage("group_message", { groupId, content, tempId });
+  //     return tempId;
+  //   },
+  //   [sendMessage],
+  // );
+
+  // // Helper for Typing Indicators (WhatsApp's "user is typing..." feature)
+  // const sendTyping = useCallback(
+  //   (receiverId, isTyping) => {
+  //     sendMessage("typing", { receiverId, isTyping });
+  //   },
+  //   [sendMessage],
+  // );
+
+  // // Helper for Read Receipts
+  // const sendReadReceipt = useCallback(
+  //   (messageId, chatType) => {
+  //     sendMessage("read_receipt", { messageId, chatType });
+  //   },
+  //   [sendMessage],
+  // );
+
+  // ==========================================
+  // SEND MESSAGE FUNCTIONS (NestJS Formatted)
+  // ==========================================
+
   const sendPrivateMessage = useCallback(
     (receiverId, content, replyTo = null) => {
-      const tempId = generateId(); // Temporary ID for Optimistic UI
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        const tempId = Date.now().toString(); // Generate a temporary ID
 
-      sendMessage("private_message", { receiverId, content, replyTo, tempId });
-      return tempId; // Return the tempId so that the UI can display the message immediately
+        // 🟢 CHANGED: We now format it EXACTLY how NestJS wants it: { event, data }
+        const payload = {
+          event: "private_message",
+          data: {
+            receiverId,
+            content,
+            replyTo,
+            tempId,
+          },
+        };
+
+        wsRef.current.send(JSON.stringify(payload));
+      }
     },
-    [sendMessage],
+    [],
   );
 
-  // Helper for Group Messages
-  const sendGroupMessage = useCallback(
-    (groupId, content) => {
-      const tempId = generateId();
-      sendMessage("group_message", { groupId, content, tempId });
-      return tempId;
-    },
-    [sendMessage],
-  );
+  const sendGroupMessage = useCallback((groupId, content) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      const tempId = Date.now().toString();
 
-  // Helper for Typing Indicators (WhatsApp's "user is typing..." feature)
-  const sendTyping = useCallback(
-    (receiverId, isTyping) => {
-      sendMessage("typing", { receiverId, isTyping });
-    },
-    [sendMessage],
-  );
+      const payload = {
+        event: "group_message",
+        data: {
+          groupId,
+          content,
+          tempId,
+        },
+      };
 
-  // Helper for Read Receipts
-  const sendReadReceipt = useCallback(
-    (messageId, chatType) => {
-      sendMessage("read_receipt", { messageId, chatType });
-    },
-    [sendMessage],
-  );
+      wsRef.current.send(JSON.stringify(payload));
+    }
+  }, []);
+
+  const sendTyping = useCallback((receiverId, isTyping) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      const payload = {
+        event: "typing",
+        data: {
+          receiverId,
+          isTyping,
+        },
+      };
+      wsRef.current.send(JSON.stringify(payload));
+    }
+  }, []);
+
+  const sendReadReceipt = useCallback((messageId, chatType) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      const payload = {
+        event: "read_receipt",
+        data: {
+          messageId,
+          chatType,
+        },
+      };
+      wsRef.current.send(JSON.stringify(payload));
+    }
+  }, []);
 
   // CLEANUP: If the user navigates away or closes the tab, kill the socket
   useEffect(() => {
