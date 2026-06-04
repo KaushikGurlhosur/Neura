@@ -19,7 +19,8 @@ export function useWebSocket() {
   const shouldReconnectRef = useRef(true);
 
   const buildWebSocketUrl = useCallback((token) => {
-    return process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
+    return process.env.NEXT_PUBLIC_WS_URL;
+    // return process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
   }, []);
 
   // INCOMING MESSAGE HANDLER

@@ -33,7 +33,7 @@ const Home = () => {
 
   return (
     <ChatProvider>
-      <div className="h-screen w-screen bg-[#e0e5ec] overflow-hidden p-3 font-sans antialiased gap-4 select-none">
+      <div className="flex h-screen w-screen bg-[#e0e5ec] overflow-hidden p-3 font-sans antialiased gap-4 select-none">
         <Sidebar />
         <ChatArea />
       </div>
