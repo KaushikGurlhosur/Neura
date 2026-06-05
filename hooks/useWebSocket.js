@@ -2,6 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// Helper to grab the login token from the browser cookies
+const getCookie = (name) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`; // Add a "; " at the beginning to make sure we can split correctly even if it's the first cookie
+  const parts = value.split(`; ${name}=`); // Split the cookie string into parts based on the target cookie name
+  if (parts.length === 2) return parts.pop().split(";").shift(); // If we found the cookie, split it again at ";" to isolate its value and return it
+  return null;
+};
+
 export function useWebSocket() {
   // STATE
   const [isConnected, setIsConnected] = useState(false);
@@ -95,7 +104,7 @@ export function useWebSocket() {
   }, []);
 
   // CONNECTION LOGIC
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     // 🟢 CHANGED: Added Server-Side Rendering (SSR) protection.
     // WHY: Next.js runs code on the server first. WebSockets don't exist there. This stops the app from crashing on load.
     if (typeof window === "undefined") return;
@@ -110,6 +119,24 @@ export function useWebSocket() {
       wsRef.current.close();
     }
 
+    let ticketToUse = null;
+    try {
+      console.log("Requesting secure WebSocket boarding pass...");
+      const res = await fetch("/api/auth/ticket");
+      const data = await res.json();
+
+      if (data.success && data.ticket) {
+        ticketToUse = data.ticket;
+      }
+    } catch (error) {
+      console.error("Failed to fetch WebSocket ticket", error);
+    }
+
+    if (!ticketToUse) {
+      console.warn("No ticket available. Aborting WebSocket connection.");
+      return;
+    }
+
     // 🟢 CHANGED: Replaced the old "window.location.host" logic with our new URL builder.
     // WHY: This forces the React frontend to connect to NestJS (Port 3001) instead of itself (Port 3000).
     const wsUrl = buildWebSocketUrl();
@@ -122,6 +149,13 @@ export function useWebSocket() {
       if (socket !== wsRef.current) return; // GUARD: Only proceed if this is still the active socket.
       console.log("Websocket connected✅");
       setIsConnected(true);
+
+      socket.send(
+        JSON.stringify({
+          event: "authenticate",
+          data: { token: ticketToUse },
+        }),
+      );
 
       // Clear any pending reconnection timers if we successfully connect
       if (reconnectTimeoutRef.current) {
