@@ -41,6 +41,24 @@ export function useWebSocket() {
         setMessages((prev) => [...prev, data.message]);
         break;
 
+      case "read_receipt":
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === data.messageId ? { ...msg, status: "read" } : msg,
+          ),
+        );
+        break;
+
+      case "message_delivered":
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === data.messageId && msg.status !== "read"
+              ? { ...msg, status: "delivered" }
+              : msg,
+          ),
+        );
+        break;
+
       case "message_sent_confirm":
         // OPTIMISTIC UI: When the server confirms the message was saved.
         // We find the "tempId" message and replace it with the real DB object.

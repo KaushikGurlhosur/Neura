@@ -493,7 +493,7 @@ export default function ChatArea() {
 
   if (!activeChat) {
     return (
-      <div className="flex-1 h-full bg-[#fbf2de] rounded-3xl shadow-[12px_12px_24px_#bec3cf,-12px_-12px_24px_#ffffff] flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex-1 h-full bg-[#fbf2de] rounded-3xl shadow-[12px_12px_24px_#bec3cf,-12px_-12px_24px_#ffffff] flex flex-col items-center justify-center p-6 text-center">  
         <div className="w-20 h-20 rounded-full bg-[#e0e5ec] shadow-[6px_6px_12px_#bec3cf,-6px_-6px_12px_#ffffff] flex items-center justify-center text-[#9499b7] mb-4">
           <svg
             viewBox="0 0 24 24"
@@ -545,7 +545,7 @@ export default function ChatArea() {
     if (!input.trim() || !websocket.isConnected) return;
 
     // 🟢 FIXED: Safely check if it's a group, otherwise default to private message
-    const isGroup = activeChat.type === "group" || activeChat.members;
+    const isGroup = activeChat.type === "group" || activeChat.members;  
 
     if (activeChat.type === "direct") {
       websocket.sendPrivateMessage(activeChat._id, input, replyTarget?._id);
