@@ -58,40 +58,34 @@ export default function ChatArea() {
   const [activeMenuId, setActiveMenuId] = useState(null);
 
   const messageEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null); // 🟢 FIXED: Typo from typingTimeOutRef
+  const typingTimeoutRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
 
   // ─── AI AUTOPILOT STATE ─────────────────────────────────────────────────
-  const [aiMode, setAiMode] = useState("off"); // "off" | "partial" | "full"
+  const [aiMode, setAiMode] = useState("off"); // 'off' | 'partial' | 'full'
   const [aiPersona, setAiPersona] = useState("friendly");
   const [showAiMenu, setShowAiMenu] = useState(false);
   const aiMenuRef = useRef(null);
 
-  // we reset the AI settings DURING the render to avoid cascading re-renders.
-  const [prevChatId, setPrevChatId] = useState(activeChat?._id);
-
-  // Close AI menu on outside click
+  // Close AI menu when clicking outside of it
   useEffect(() => {
-    function handleClickOutSide(event) {
+    function handleClickOutside(event) {
       if (aiMenuRef.current && !aiMenuRef.current.contains(event.target)) {
         setShowAiMenu(false);
       }
     }
-
-    document.addEventListener("mousedown", handleClickOutSide);
-    return () => document.removeEventListener("mousedown", handleClickOutSide);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (activeChat?._id !== prevChatId) {
-    setPrevChatId(activeChat?._id);
+  // Reset AI settings when switching chats (prevents sending full bot replies to the wrong person)
+  useEffect(() => {
     setAiMode("off");
     setAiPersona("friendly");
     setShowAiMenu(false);
-    setInput(""); // Bonus: This safely clears the text box when you switch chats!
-    setReplyTarget(null); // Bonus: Clears any active replies when you switch chats
-  }
+  }, [activeChat?._id]);
 
-  // 1. Fetch History on Chat Switch
+  // ─── HISTORY & SCROLLING ────────────────────────────────────────────────
   useEffect(() => {
     if (!activeChat) return;
 
@@ -101,7 +95,7 @@ export default function ChatArea() {
         const data = await res.json();
 
         if (data.success) {
-          websocket.setMessages(data.messages || []); // 🟢 FIXED: Fallback to empty array to prevent map crashes
+          websocket.setMessages(data.messages || []);
 
           if (websocket.isConnected) {
             data.messages.forEach((msg) => {
@@ -120,7 +114,6 @@ export default function ChatArea() {
     loadHistory();
   }, [activeChat?._id, websocket.isConnected]);
 
-  // 2. Auto-scroll to bottom on new message
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [websocket.messages, typingUsers]);
@@ -151,14 +144,10 @@ export default function ChatArea() {
 
   const isPartnerOnline = onlineUsers.has(activeChat._id);
   const isPartnerTyping = typingUsers[activeChat._id];
-
-  // 🟢 FIXED: Safe fallback if a user is missing a 'name' property
   const chatDisplayName = activeChat.name || activeChat.username || "Chat";
-
-  // 🟢 FIXED: Robust helper to extract ID from populated objects without crashing on null
   const getSenderId = (sender) => sender?._id || sender;
 
-  // ─── Input & Transmission Handlers ────────────────────────────────────────
+  // ─── HANDLERS ───────────────────────────────────────────────────────────
   const handleTyping = (e) => {
     setInput(e.target.value);
 
@@ -176,10 +165,7 @@ export default function ChatArea() {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!input.trim() || !websocket.isConnected) return;
-
-    // 🟢 FIXED: Safely check if it's a group, otherwise default to private message
-    const isGroup = activeChat.type === "group" || activeChat.members;
+    if (!input.trim() || !websocket.isConnected || aiMode === "full") return;
 
     if (activeChat.type === "direct") {
       websocket.sendPrivateMessage(activeChat._id, input, replyTarget?._id);
@@ -204,7 +190,6 @@ export default function ChatArea() {
 
   const handleDelete = async (msgId, scope) => {
     try {
-      // 🟢 FIXED: Actually assign the result to 'res'
       const res = await fetch("/api/messages/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -232,12 +217,16 @@ export default function ChatArea() {
       <div className="p-4 bg-[#fbf2de] border-b border-black/5 flex items-center justify-between z-10 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#e0e5ec] shadow-[2px_2px_5px_#bec3cf,-2px_-2px_5px_#ffffff] flex items-center justify-center font-bold text-[#3d4468]">
-            {/* 🟢 FIXED: Uses the safe chatDisplayName variable */}
             {chatDisplayName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h3 className="text-[#3d4468] font-bold text-base leading-tight">
+            <h3 className="text-[#3d4468] font-bold text-base leading-tight flex items-center gap-2">
               {chatDisplayName}
+              {aiMode === "full" && (
+                <span className="text-[10px] bg-purple-500/20 text-purple-700 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                  AUTOPILOT ON
+                </span>
+              )}
             </h3>
             <p className="text-[11px] font-semibold mt-0.5">
               {isPartnerTyping ? (
@@ -267,8 +256,6 @@ export default function ChatArea() {
         {websocket.messages.map((msg) => {
           const senderId = getSenderId(msg.sender);
           const isMe = senderId === currentUserId;
-
-          // Find the reply context if it exists
           const replyContext = msg.replyTo
             ? websocket.messages.find((m) => m._id === msg.replyTo)
             : null;
@@ -283,12 +270,10 @@ export default function ChatArea() {
                     ? "bg-[#e0e5ec] shadow-[5px_5px_10px_#bec3cf,-5px_-5px_10px_#ffffff] rounded-tr-sm"
                     : "bg-[#fcc48c] shadow-[4px_4px_8px_#d9a776,-4px_-4px_8px_#ffe1a2] rounded-tl-sm"
                 }`}>
-                {/* Reply Snippet */}
                 {replyContext && (
                   <div
                     className={`mb-2 p-2 rounded-lg text-xs opacity-80 border-l-4 ${isMe ? "bg-black/5 border-[#3d4468]" : "bg-white/30 border-[#e67e22]"}`}>
                     <p className="font-bold">
-                      {/* 🟢 FIXED: Safely compares reply sender */}
                       {getSenderId(replyContext.sender) === currentUserId
                         ? "You"
                         : chatDisplayName}
@@ -304,10 +289,8 @@ export default function ChatArea() {
                   {msg.content}
                 </p>
 
-                {/* Status and Time Row */}
                 <div className="flex items-center justify-end gap-1 mt-1">
                   <span className="text-[10px] text-[#3d4468]/60 font-semibold">
-                    {/* 🟢 FIXED: Removed impure Date.now() from render */}
                     {msg.createdAt
                       ? new Date(msg.createdAt).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -315,7 +298,6 @@ export default function ChatArea() {
                         })
                       : "Just now"}
                   </span>
-
                   {isMe && !msg.isDeleted && (
                     <span>
                       {msg.status === "read" && <CheckIcon double read />}
@@ -329,7 +311,6 @@ export default function ChatArea() {
                 </div>
               </div>
 
-              {/* Action Dropdown Toggle (Hover) */}
               {!msg.isDeleted && (
                 <div
                   className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1 z-20 ${isMe ? "left-0 -translate-x-8" : "right-0 translate-x-8"}`}>
@@ -343,7 +324,6 @@ export default function ChatArea() {
                 </div>
               )}
 
-              {/* Contextual Actions Menu */}
               {activeMenuId === (msg._id || msg.tempId) && (
                 <div
                   className={`absolute bg-[#e0e5ec] shadow-[4px_4px_15px_#bec3cf,-4px_-4px_15px_#ffffff] p-2 rounded-xl flex flex-col gap-2 z-30 top-8 w-32 ${isMe ? "right-0" : "left-0"}`}>
@@ -376,10 +356,48 @@ export default function ChatArea() {
         <div ref={messageEndRef} />
       </div>
 
-      {/* ─── Messaging Input ─── */}
-      <form
-        onSubmit={handleSendMessage}
-        className="p-4 bg-[#fbf2de] flex flex-col gap-2 z-10">
+      {/* ─── AI SETTINGS & MESSAGING INPUT ─── */}
+      <div className="relative p-4 bg-[#fbf2de] flex flex-col gap-2 z-10">
+        {/* Neumorphic AI Settings Popover */}
+        {showAiMenu && (
+          <div
+            ref={aiMenuRef}
+            className="absolute bottom-[80px] left-4 z-50 w-64 p-4 bg-[#e0e5ec] rounded-2xl shadow-[8px_8px_16px_#bec3cf,-8px_-8px_16px_#ffffff] border border-white/50 animate-slideDown">
+            <h4 className="text-[#3d4468] font-black text-sm mb-3">
+              Autopilot Settings
+            </h4>
+
+            <div className="flex bg-[#fbf2de] rounded-xl p-1 mb-4 shadow-[inset_2px_2px_5px_#bec3cf,inset_-2px_-2px_5px_#ffffff]">
+              {["off", "partial", "full"].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setAiMode(m)}
+                  className={`flex-1 text-[11px] font-bold py-2 capitalize rounded-lg transition-all ${aiMode === m ? "bg-[#e0e5ec] text-[#3d4468] shadow-[2px_2px_5px_#bec3cf,-2px_-2px_5px_#ffffff]" : "text-[#9499b7] hover:text-[#3d4468]"}`}>
+                  {m}
+                </button>
+              ))}
+            </div>
+
+            {aiMode !== "off" && (
+              <div className="animate-fade-in">
+                <label className="text-[#9499b7] text-[11px] font-bold mb-1 block uppercase tracking-wider">
+                  AI Persona
+                </label>
+                <select
+                  value={aiPersona}
+                  onChange={(e) => setAiPersona(e.target.value)}
+                  className="w-full bg-[#e0e5ec] text-[#3d4468] text-sm font-bold p-2.5 rounded-xl shadow-[inset_3px_3px_6px_#bec3cf,inset_-3px_-3px_6px_#ffffff] outline-none border-none appearance-none cursor-pointer">
+                  <option value="friendly">Friendly 😊</option>
+                  <option value="professional">Professional 💼</option>
+                  <option value="flirty">Flirty ✨</option>
+                  <option value="cryptic">Cryptic 🕶️</option>
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Reply Context Bar */}
         {replyTarget && (
           <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#e0e5ec] shadow-[inset_3px_3px_6px_#bec3cf,inset_-3px_-3px_6px_#ffffff] text-sm animate-slideDown">
@@ -403,27 +421,63 @@ export default function ChatArea() {
           </div>
         )}
 
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            placeholder={
-              websocket.isConnected
-                ? "Type a secure message..."
-                : "Reconnecting to server..."
-            }
-            value={input}
-            onChange={handleTyping}
-            disabled={!websocket.isConnected}
-            className="flex-1 bg-[#e0e5ec] border-none rounded-2xl p-4 shadow-[inset_4px_4px_8px_#bec3cf,inset_-4px_-4px_8px_#ffffff] text-[#3d4468] text-sm outline-none font-medium placeholder-[#9499b7]"
-          />
+        {/* The Input Row */}
+        <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+          {/* AI Toggle Button */}
           <button
-            type="submit"
-            disabled={!websocket.isConnected || !input.trim()}
-            className="p-4 rounded-2xl bg-[#e0e5ec] text-[#3d4468] shadow-[4px_4px_8px_#bec3cf,-4px_-4px_8px_#ffffff] active:shadow-[inset_2px_2px_4px_#bec3cf,inset_-2px_-2px_4px_#ffffff] disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center">
-            <SendIcon />
+            type="button"
+            onClick={() => setShowAiMenu(!showAiMenu)}
+            className={`p-3 rounded-2xl font-bold text-xl transition-all flex items-center justify-center ${
+              aiMode !== "off"
+                ? "bg-[#3d4468] text-white shadow-[4px_4px_8px_#bec3cf,-4px_-4px_8px_#ffffff]"
+                : "bg-[#e0e5ec] text-[#f99006] shadow-[4px_4px_8px_#bec3cf,-4px_-4px_8px_#ffffff] active:shadow-[inset_2px_2px_4px_#bec3cf,inset_-2px_-2px_4px_#ffffff]"
+            }`}
+            title="Autopilot Controls">
+            AI
           </button>
-        </div>
-      </form>
+
+          <div className="flex-1 relative flex items-center">
+            <input
+              type="text"
+              placeholder={
+                aiMode === "full"
+                  ? "🚀 Autopilot is responding for you..."
+                  : websocket.isConnected
+                    ? "Type a secure message..."
+                    : "Reconnecting to server..."
+              }
+              value={input}
+              onChange={handleTyping}
+              disabled={!websocket.isConnected || aiMode === "full"}
+              className={`w-full border-none rounded-2xl p-4 pr-20 text-sm outline-none font-medium transition-all ${
+                aiMode === "full"
+                  ? "bg-[#e0e5ec] shadow-[inset_2px_2px_4px_#bec3cf,inset_-2px_-2px_4px_#ffffff] text-[#9499b7] italic cursor-not-allowed"
+                  : "bg-[#e0e5ec] shadow-[inset_4px_4px_8px_#bec3cf,inset_-4px_-4px_8px_#ffffff] text-[#3d4468] placeholder-[#9499b7]"
+              }`}
+            />
+
+            {/* Draft Co-Pilot Button (Only in Partial Mode) */}
+            {aiMode === "partial" && (
+              <button
+                type="button"
+                onClick={handleAiDraft}
+                className="absolute right-3 py-1.5 px-3 rounded-xl bg-[#fbf2de] text-[#3d4468] font-bold text-xs shadow-[2px_2px_5px_#bec3cf,-2px_-2px_5px_#ffffff] active:shadow-[inset_2px_2px_4px_#bec3cf,inset_-2px_-2px_4px_#ffffff] transition-all hover:text-[#9b59b6]">
+                Draft ✨
+              </button>
+            )}
+          </div>
+
+          {/* Send Button */}
+          {aiMode !== "full" && (
+            <button
+              type="submit"
+              disabled={!websocket.isConnected || !input.trim()}
+              className="p-4 rounded-2xl bg-[#e0e5ec] text-[#3d4468] shadow-[4px_4px_8px_#bec3cf,-4px_-4px_8px_#ffffff] active:shadow-[inset_2px_2px_4px_#bec3cf,inset_-2px_-2px_4px_#ffffff] disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center">
+              <SendIcon />
+            </button>
+          )}
+        </form>
+      </div>
     </div>
   );
 }
