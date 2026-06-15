@@ -120,17 +120,30 @@ export async function POST(request) {
 
     let conversation = await Conversation.findOne({
       chatType: "User",
-      participants: [currentUserId, receiverId],
-      participantsSettings: [
-        {
-          user: currentUserId,
-        },
-        { user: receiverId },
-      ],
+      participants: { $all: [currentUserId, receiverId], $size: 2 },
     });
+
+    // Auto-create the room if it doesn't exist yet (first message)
+    if (!conversation) {
+      conversation = await Conversation.create({
+        chatType: "User",
+        participants: [currentUserId, receiverId],
+        participantSettings: [
+          {
+            user: currentUserId,
+            aiAutopilot: { mode: "off", persona: "friendly" },
+          },
+          {
+            user: receiverId,
+            aiAutopilot: { mode: "off", persona: "friendly" },
+          },
+        ],
+      });
+    }
 
     // 1. Create message in MongoDB
     const newMessage = await Message.create({
+      connversationId: conversation._id,
       chatType: "User",
       sender: currentUserId,
       receiver: receiverId,
