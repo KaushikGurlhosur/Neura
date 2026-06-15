@@ -97,6 +97,16 @@ export default function ChatArea() {
         if (data.success) {
           websocket.setMessages(data.messages || []);
 
+          // If the database has saved AI properties for this thread, set them!
+          if (data.aiSettings) {
+            setAiMode(data.aiSettings.mode);
+            setAiPersona(data.aiSettings.persona);
+          } else {
+            // Safe fallback defaults
+            setAiMode("off");
+            setAiPersona("friendly");
+          }
+
           if (websocket.isConnected) {
             data.messages.forEach((msg) => {
               const senderId =

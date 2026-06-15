@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import Message from "@/lib/models/Message";
+import Conversation from "@/lib/models/Conversation";
 
 export async function GET(request) {
   try {
@@ -12,12 +13,13 @@ export async function GET(request) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const currentUserId = decoded.userId;
 
     const { searchParams } = new URL(request.url);
-    const otherUserId = searchParams.get("userId"); // The person you clicked on to view messages
-    if (!otherUserId) {
+    const targetId = searchParams.get("userId"); // The person you clicked on to view messages
+    if (!targetId) {
       return NextResponse.json(
-        { error: "userId query parameter is required" },
+        { success: false, message: "Missing target userId" },
         { status: 400 },
       );
     }
@@ -30,25 +32,63 @@ export async function GET(request) {
         : 50;
 
     // We search for messages where:
-    // (Sender is ME AND Receiver is THEM) OR (Sender is THEM AND Receiver is ME)
+    // We search for a 1-on-1 thread containing exactly you and the target user
+    let conversation = await Conversation.findOne({
+      chatType: "User",
+      participants: { $all: [currentUserId, targetId], $size: 2 },
+    });
 
+    // Auto-create the room if it doesn't exist yet (first message)
+    if (!conversation) {
+      conversation = await Conversation.create({
+        chatType: "User",
+        participants: [currentUserId, targetId],
+        participantSettings: [
+          {
+            user: currentUserId,
+            aiAutopilot: { mode: "off", persona: "friendly" },
+          },
+          { user: targetId, aiAutopilot: { mode: "off", persona: "friendly" } },
+        ],
+      });
+    }
+
+    const mySettingsNode = conversation.participantSettings.find(
+      (setting) => setting.user.toString() === currentUserId,
+    );
+
+    const extractedAiSettings = mySettingsNode?.aiAutopilot || {
+      mode: "off",
+      persona: "friendly",
+    };
+
+    // FETCH MESSAGES: We fetch messages where either you sent it to them, or they sent it to you.
     const messages = (
       await Message.find({
         chatType: "User",
-        $or: [
-          { sender: decoded.userId, receiver: otherUserId },
-          { sender: otherUserId, receiver: decoded.userId },
-        ],
         isDeleted: false,
+        $or: [
+          { conversationId: conversation._id },
+          {
+            $or: [
+              { sender: currentUserId, receiver: targetId },
+              { sender: targetId, receiver: currentUserId },
+            ],
+          },
+        ],
       })
         .populate("sender", "name username avatar")
         .populate("receiver", "name username avatar")
-
         .sort({ createdAt: -1 }) // newest first so limit keeps the most recent
         .limit(limit)
     ).reverse(); // present oldest → newest to the client
 
-    return NextResponse.json({ success: true, messages });
+    return NextResponse.json({
+      success: true,
+      conversationId: conversation._id,
+      aiSettings: extractedAiSettings,
+      messages,
+    });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -65,6 +105,7 @@ export async function POST(request) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const currentUserId = decoded.userId;
 
     // Parse the body from ChatWindow.js
     const body = await request.json();
@@ -77,14 +118,44 @@ export async function POST(request) {
       );
     }
 
+    let conversation = await Conversation.findOne({
+      chatType: "User",
+      participants: { $all: [currentUserId, receiverId], $size: 2 },
+    });
+
+    // Auto-create the room if it doesn't exist yet (first message)
+    if (!conversation) {
+      conversation = await Conversation.create({
+        chatType: "User",
+        participants: [currentUserId, receiverId],
+        participantSettings: [
+          {
+            user: currentUserId,
+            aiAutopilot: { mode: "off", persona: "friendly" },
+          },
+          {
+            user: receiverId,
+            aiAutopilot: { mode: "off", persona: "friendly" },
+          },
+        ],
+      });
+    }
+
     // 1. Create message in MongoDB
     const newMessage = await Message.create({
+      connversationId: conversation._id,
       chatType: "User",
-      sender: decoded.userId,
+      sender: currentUserId,
       receiver: receiverId,
       content: content.trim(),
       status: "sent",
     });
+
+    // ─── UPDATE SIDEBAR PREVIEW ──────────────────────────────────────────
+    // 🟢 ADDED: Keep the thread updated with the latest message data
+    conversation.lastMessage = newMessage._id;
+    conversation.lastMessageAt = new Date();
+    await conversation.save();
 
     // 2. Populate sender so frontend has user details (avatar, name)
     const populatedMessage = await newMessage.populate(
