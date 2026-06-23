@@ -1,29 +1,39 @@
 import { NextResponse } from "next/server";
-import { dbConnect } from "@/lib/db"; // Adjust path to match your layout database bootstrapper
+import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
-import { getSessionUser } from "@/lib/auth"; // Adjust path to match your session helper
+import jwt from "jsonwebtoken";
 
 export async function GET(request) {
   try {
     await dbConnect();
-    const currentUser = await getSessionUser();
-    if (!currentUser)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 1 });
+
+    const token = request.cookies.get("token")?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const currentUserId = decoded.userId;
 
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get("q")?.trim().toLowerCase();
+    const query = searchParams.get("q")?.trim();
 
     if (!query || query.length < 3) {
       return NextResponse.json({ users: [] });
     }
 
+    // Escape Regex to prevent ReDoS (The CodeRabbit Fix)
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     // Lookup matches ignoring the current authenticated user's profile
+
     const users = await User.find({
-      _id: { $ne: currentUser.id },
+      _id: { $ne: currentUserId },
       $or: [
-        { username: { $regex: query, $options: "i" } },
-        { email: { $regex: query, $options: "i" } },
-        { phoneNumber: { $regex: query, $options: "i" } },
+        { username: { $regex: escapedQuery, $options: "i" } },
+        { email: { $regex: escapedQuery, $options: "i" } },
+        { phoneNumber: { $regex: escapedQuery, $options: "i" } },
       ],
     })
       .select("name username email avatar bio")
