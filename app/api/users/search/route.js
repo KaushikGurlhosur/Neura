@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
-import User from "@/models/User";
+import User from "@/lib/models/Users";
 import jwt from "jsonwebtoken";
 
 export async function GET(request) {
