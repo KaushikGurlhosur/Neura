@@ -23,7 +23,7 @@ export async function GET(request) {
     })
       .populate("participants", "name username avatar status lastSeen")
       .populate("lastMessage", "content createdAt status")
-      .sort({ lastmessageAt: -1 });
+      .sort({ lastMessageAt: -1 });
 
     return NextResponse.json({ success: true, conversation });
   } catch (error) {
