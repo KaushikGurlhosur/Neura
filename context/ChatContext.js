@@ -24,6 +24,8 @@ export function ChatProvider({ children }) {
   const [groups, setGroups] = useState([]); // List of groups the user belongs to
   const [activeChat, setActiveChat] = useState(null); // The currently opened chat
 
+  const [conversations, setConversations] = useState([]); // List of all conversations (threads)
+
   // --- REAL-TIME TRACKING ---
   // Using a Set for onlineUsers makes lookups very fast: onlineUsers.has(userId)
   const [onlineUsers, setOnlineUsers] = useState(new Set());
@@ -139,6 +141,25 @@ export function ChatProvider({ children }) {
     }
   };
 
+  const fetchConversations = async () => {
+    try {
+      const res = await fetch("/api/conversations");
+      const data = await res.json();
+
+      if (data.success) {
+        setConversations(data.conversations);
+      }
+    } catch (error) {
+      console.error("Error fetching conversations: ", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchGroups();
+    fetchConversations();
+  }, []);
+
   /**
    * ACTIONS
    * Logic to create new resources (like a WhatsApp Group)
@@ -178,6 +199,9 @@ export function ChatProvider({ children }) {
         fetchUsers,
         createGroup,
         currentUserId,
+        conversations,
+        setConversations,
+        fetchConversations,
       }}>
       {children}
     </ChatContext.Provider>
