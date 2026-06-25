@@ -38,7 +38,28 @@ export function useWebSocket() {
       case "new_message":
       case "group_message":
         // Append new messages to the existing list
-        setMessages((prev) => [...prev, data.message]);
+        // 🟢 UPDATED: Cross-Chat Contamination Protection
+        setMessages((prev) => {
+          // Prevent duplicate rendering
+          if (prev.some((msg) => msg._id === data.message._id)) return prev;
+
+          // Prevent bleeding: If we have a message on the screen and the new message is from a different conversation, we ignore it.
+          if (
+            prev.length > 0 &&
+            data.message.conversationId &&
+            prev[0].conversationId
+          ) {
+            if (prev[0].conversationId !== data.message.conversationId) {
+              return prev; // Ignore messages from other conversations
+            }
+          }
+
+          return [...prev, data.message];
+        });
+
+        window.dispatchEvent(
+          new CustomEvent("chatUpdate", { detail: data.message }),
+        );
         break;
 
       case "read_receipt":
@@ -292,7 +313,7 @@ export function useWebSocket() {
   // ==========================================
 
   const sendPrivateMessage = useCallback(
-    (receiverId, content, replyTo = null) => {
+    (receiverId, content, replyTo = null, conversationId = null) => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         const tempId = Date.now().toString(); // Generate a temporary ID
 
@@ -304,6 +325,7 @@ export function useWebSocket() {
             content,
             replyTo,
             tempId,
+            conversationId,
           },
         };
 
