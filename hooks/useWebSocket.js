@@ -271,43 +271,6 @@ export function useWebSocket() {
     globalThis.crypto?.randomUUID?.() ||
     `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-  // // Helper for Private Messages
-  // const sendPrivateMessage = useCallback(
-  //   (receiverId, content, replyTo = null) => {
-  //     const tempId = generateId(); // Temporary ID for Optimistic UI
-
-  //     sendMessage("private_message", { receiverId, content, replyTo, tempId });
-  //     return tempId; // Return the tempId so that the UI can display the message immediately
-  //   },
-  //   [sendMessage],
-  // );
-
-  // // Helper for Group Messages
-  // const sendGroupMessage = useCallback(
-  //   (groupId, content) => {
-  //     const tempId = generateId();
-  //     sendMessage("group_message", { groupId, content, tempId });
-  //     return tempId;
-  //   },
-  //   [sendMessage],
-  // );
-
-  // // Helper for Typing Indicators (WhatsApp's "user is typing..." feature)
-  // const sendTyping = useCallback(
-  //   (receiverId, isTyping) => {
-  //     sendMessage("typing", { receiverId, isTyping });
-  //   },
-  //   [sendMessage],
-  // );
-
-  // // Helper for Read Receipts
-  // const sendReadReceipt = useCallback(
-  //   (messageId, chatType) => {
-  //     sendMessage("read_receipt", { messageId, chatType });
-  //   },
-  //   [sendMessage],
-  // );
-
   // ==========================================
   // SEND MESSAGE FUNCTIONS (NestJS Formatted)
   // ==========================================

@@ -54,7 +54,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      conversationId: converstion._id,
+      conversationId: conversation._id,
     });
   } catch (error) {
     console.error("Error initiating conversation:", error);
