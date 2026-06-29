@@ -27,6 +27,9 @@ export function useWebSocket() {
   // it SHOULD be trying to connect or if it should stay off.
   const shouldReconnectRef = useRef(true);
 
+  // 🟢 ADDED: Memory bank to track processed messages and prevent duplicate events
+  const seenMessagesRef = useRef(new Set());
+
   const buildWebSocketUrl = useCallback((token) => {
     return process.env.NEXT_PUBLIC_WS_URL;
     // return process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
@@ -37,6 +40,13 @@ export function useWebSocket() {
     switch (data.type) {
       case "new_message":
       case "group_message":
+        // 🟢 FIXED: CodeRabbit Duplicate Guard
+        // Check our memory bank FIRST. If we've seen this ID, kill the process completely.
+        if (seenMessagesRef.current.has(data.message._id)) return;
+
+        // Add to memory bank so we never process it again
+        seenMessagesRef.current.add(data.message._id);
+
         // Append new messages to the existing list
         // 🟢 UPDATED: Cross-Chat Contamination Protection
         setMessages((prev) => {
