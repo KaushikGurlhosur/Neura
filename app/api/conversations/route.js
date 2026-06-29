@@ -18,14 +18,14 @@ export async function GET(request) {
     const currentUserId = decoded.userId;
 
     // 2. Fetch all conversations where you are participant
-    const conversation = await Conversation.find({
+    const conversations = await Conversation.find({
       participants: currentUserId,
     })
       .populate("participants", "name username avatar status lastSeen")
       .populate("lastMessage", "content createdAt status")
       .sort({ lastMessageAt: -1 });
 
-    return NextResponse.json({ success: true, conversation });
+    return NextResponse.json({ success: true, conversations });
   } catch (error) {
     console.error("Fetch Conversations Error:", error);
     return NextResponse.json(
