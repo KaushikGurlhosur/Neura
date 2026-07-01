@@ -3,7 +3,7 @@
 import { useChat } from "@/context/ChatContext";
 import { useEffect, useRef, useState } from "react";
 
-// ─── SVG Icons ────────────────────────────────────────────────────────────
+// ─── SVG Icons ─────────
 const SendIcon = () => (
   <svg
     viewBox="0 0 24 24"
