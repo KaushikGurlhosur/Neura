@@ -68,6 +68,8 @@ export default function ChatArea() {
   const [showAiMenu, setShowAiMenu] = useState(false);
   const aiMenuRef = useRef(null);
 
+  const [isDrafting, setIsDrafting] = useState(false);
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (aiMenuRef.current && !aiMenuRef.current.contains(event.target)) {
@@ -234,10 +236,42 @@ export default function ChatArea() {
     websocket.sendTyping(activeChat._id, false);
   };
 
-  const handleAiDraft = () => {
-    setInput(
-      `[${aiPersona.toUpperCase()} AI DRAFT] ✨ Just checking in on this!`,
-    );
+  const handleAiDraft = async () => {
+    if (websocket.messages.length === 0 || isDrafting) return; // Prevent drafting if no messages or already drafting
+
+    setIsDrafting(true);
+    setInput("✨ AI is thinking...");
+
+    try {
+      // Grab the last 5 messages for context, so the AI knows what we are talking about
+      const recentMessages = websocket.messages.slice(-5).map((msg) => ({
+        role: getSenderId(msg.sender) === currentUserId ? "Me" : "Friend",
+        content: msg.content,
+      }));
+
+      const res = await fetch("/api/ai/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatHistory: recentMessages,
+          persona: aiPersona,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setInput(data.draft);
+      } else {
+        setInput("");
+        console.error("Failed to generate draft");
+      }
+    } catch (error) {
+      setInput("");
+      console.error("AI Draft Error:", error);
+    } finally {
+      setIsDrafting(false);
+    }
   };
 
   const handleDelete = async (msgId, scope) => {
@@ -526,8 +560,9 @@ export default function ChatArea() {
               <button
                 type="button"
                 onClick={handleAiDraft}
+                disabled={isDrafting}
                 className="absolute right-3 py-1.5 px-4 rounded-xl bg-[#323232] text-amber-200 font-medium tracking-wide text-xs shadow-[4px_4px_8px_#1a1a1a,-4px_-4px_8px_#323232] hover:bg-[#3a3a3a] transition-all">
-                Draft ✨
+                {isDrafting ? "✨Drafting..." : "Draft ✨"}
               </button>
             )}
           </div>
