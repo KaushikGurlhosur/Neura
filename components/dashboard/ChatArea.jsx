@@ -486,6 +486,8 @@ export default function ChatArea() {
                   <option value="professional">Professional 💼</option>
                   <option value="flirty">Flirty ✨</option>
                   <option value="cryptic">Cryptic 🕶️</option>
+                  <option value="sarcastic">Sarcastic 😆</option>
+                  <option value="humorous">Humorous 🙂‍↔️</option>
                 </select>
               </div>
             )}
@@ -520,6 +522,7 @@ export default function ChatArea() {
           {/* AI Toggle Button */}
           <button
             type="button"
+            disabled={isDrafting}
             onClick={() => setShowAiMenu(!showAiMenu)}
             className={`p-4 rounded-2xl font-black text-xs tracking-widest transition-all flex items-center justify-center ${
               aiMode !== "off"
@@ -572,7 +575,10 @@ export default function ChatArea() {
             <button
               type="submit"
               disabled={
-                !websocket.isConnected || !input.trim() || !activeConversationId
+                !websocket.isConnected ||
+                !input.trim() ||
+                !activeConversationId ||
+                isDrafting
               }
               className="p-4 rounded-2xl bg-[#262626] text-amber-100 shadow-[4px_4px_8px_#1a1a1a,-4px_-4px_8px_#323232] active:shadow-[inset_2px_2px_4px_#1a1a1a,inset_-2px_-2px_4px_#323232] disabled:opacity-30 disabled:text-neutral-600 transition-all cursor-pointer flex items-center justify-center">
               <SendIcon />
