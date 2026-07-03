@@ -387,6 +387,7 @@ export default function ChatArea() {
                         })
                       : "Just now"}
                   </span>
+
                   {isMe && !msg.isDeleted && (
                     <span>
                       {msg.status === "read" && <CheckIcon double read />}
@@ -408,6 +409,19 @@ export default function ChatArea() {
                       setActiveMenuId(activeMenuId === menuId ? null : menuId)
                     } // 🟢 Fixed menu toggle logic
                     className="text-neutral-400 hover:text-[#ecfdf5] p-1 rounded-full bg-[#262626] shadow-[2px_2px_5px_#1a1a1a,-2px_-2px_5px_#323232]">
+                    •••
+                  </button>
+                </div>
+              )}
+
+              {isMe && !msg.isDeleted && (
+                <div
+                  className={`flex items-center justify-center pr-2 transition-opacity duration-300 ${activeMenuId === menuId ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                  <button
+                    onClick={() =>
+                      setActiveMenuId(activeMenuId === menuId ? null : menuId)
+                    }
+                    className={`p-2 rounded-full transition-all ${activeMenuId === menuId ? "text-[#a7f3d0] bg-[#323232] shadow-[inset_2px_2px_4px_#1a1a1a,inset_-2px_-2px_4px_#3a3a3a]" : "text-neutral-500 hover:text-[#ecfdf5] hover:bg-[#323232] hover:shadow-[4px_4px_8px_#1a1a1a,-4px_-4px_8px_#323232]"}`}>
                     •••
                   </button>
                 </div>
@@ -545,11 +559,11 @@ export default function ChatArea() {
               }
               value={input}
               onChange={handleTyping}
-              // CodeRabbit Fix: Disable input until the conversationId is loaded
               disabled={
                 !websocket.isConnected ||
                 aiMode === "full" ||
-                !activeConversationId
+                !activeConversationId ||
+                isDrafting
               }
               className={`w-full border border-transparent rounded-2xl p-4 pr-20 text-sm outline-none font-light tracking-wide transition-all ${
                 aiMode === "full"

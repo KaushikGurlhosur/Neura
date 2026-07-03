@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 const ALLOWED_PERSONAS = [
   "friendly",
   "professional",
@@ -70,24 +71,31 @@ export async function POST(request) {
 
     // 5. 🩺 STABILITY GUARD: Race the Gemini generation against a 5-second timeout
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(
-        () => reject(new Error("AI generation deadline exceeded")),
-        5000,
-      ),
-    );
+    let timeoutId;
 
-    const result = await Promise.race([
-      model.generateContent(prompt),
-      timeoutPromise,
-    ]);
+    try {
+      const timeoutPromise = new Promise(
+        (_, reject) =>
+          (timeoutId = setTimeout(
+            () => reject(new Error("AI generation deadline exceeded")),
+            5000,
+          )),
+      );
 
-    let draftText = result.response.text();
+      const result = await Promise.race([
+        model.generateContent(prompt),
+        timeoutPromise,
+      ]);
 
-    // Clean up any accidental quotes or whitespace Gemini might add
-    draftText = draftText.replace(/^["']|["']$/g, "").trim();
+      let draftText = result.response.text();
 
-    return NextResponse.json({ success: true, draft: draftText });
+      // Clean up any accidental quotes or whitespace Gemini might add
+      draftText = draftText.replace(/^["']|["']$/g, "").trim();
+
+      return NextResponse.json({ success: true, draft: draftText });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch (error) {
     console.error("AI Draft Error:", error);
     console.error("AI Draft Route Failure:", error);
