@@ -414,7 +414,7 @@ const Sidebar = () => {
     }
   };
 
-  // ─── 🟢 FRAMER MOTION VARIANTS FOR SMOOTH LIST STAGGERING ─────────────
+  // ─── 🟢 FRAMER MOTION VARIANTS FOR SMOOTH LIST STAGGERING ─────────
   const listVariants = {
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.05 } },
