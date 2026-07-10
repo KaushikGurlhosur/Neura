@@ -77,7 +77,7 @@ export async function POST(request) {
                 "The actual text reply to send. Leave empty if needs_info.",
             },
           },
-          required: ["status"],
+          required: ["status", "missingField", "reply"],
         },
       },
     });
@@ -127,6 +127,10 @@ export async function POST(request) {
 
       // 5. 🟢 PARSE AND RETURN THE JSON DECISION
       const jsonResponse = JSON.parse(result.response.text());
+
+      // Normalize response so it never breaks frontend input.trim()
+      jsonResponse.reply = jsonResponse.reply || "";
+      jsonResponse.missingField = jsonResponse.missingField || "";
 
       // This perfectly matches what the frontend is expecting: data.decision.status!
       return NextResponse.json({ success: true, decision: jsonResponse });
