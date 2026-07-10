@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
@@ -33,7 +33,14 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { chatHistory, persona } = body;
+
+    // 🟢 ADDED: Extract knowledgeBase and skippedFields sent from the new frontend
+    const {
+      chatHistory,
+      persona,
+      knowledgeBase = {},
+      skippedFields = [],
+    } = body;
 
     if (
       !Array.isArray(chatHistory) ||
@@ -46,31 +53,62 @@ export async function POST(request) {
       );
     }
 
-    // 2. Choose the fastest model for chat responses
+    // 2. 🧠 INIT REASONING ENGINE (Forces Structured JSON Output)
     // const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            status: {
+              type: SchemaType.STRING,
+              description: 'Must be exactly "success" OR "needs_info"',
+            },
+            missingField: {
+              type: SchemaType.STRING,
+              description:
+                'If status is needs_info, what personal detail are they asking about? (e.g., "age", "work", "name")',
+            },
+            reply: {
+              type: SchemaType.STRING,
+              description:
+                "The actual text reply to send. Leave empty if needs_info.",
+            },
+          },
+          required: ["status"],
+        },
+      },
+    });
 
-    // 3. Build the System Prompt explaining how Gemini should act
-    const prompt = `You are a real person chatting in a messaging app. 
+    const myGender = knowledgeBase.gender || "neutral";
+    const myName = knowledgeBase.name || "User";
+
+    // 3. 🛡️ THE MASTER PRIVACY PROMPT
+    const prompt = `You are ${myName}, a real person chatting in a messaging app. 
     IMPORTANT: You are the person labeled "Me" in the history. You are drafting the NEXT message that "Me" will send.
     
-    Your current personality/tone is: ${persona.toUpperCase()}.
+    YOUR PROFILE:
+    - Gender: ${myGender} (If female, text in a distinctly feminine/girly style. If male, text in a distinctly masculine/bro style. If neutral, be standard).
+    - Personality/Tone: ${persona.toUpperCase()}.
+    - Known Facts: ${JSON.stringify(knowledgeBase)}
+    - Forbidden Topics (User Skipped These): ${skippedFields.join(", ")}
     
-    Rules: 
-    - Write exactly ONE short, natural reply.
-    - DO NOT wrap your response in quotes.
-    - DO NOT include prefixes like "Me:" or "Response:".
-    - Keep it brief, conversational, and human-like.
-    - If the last message in the history is from "Me", write a natural follow-up or double-text. 
-    - If the last message is from "Friend", reply to what they just said.
+    CRITICAL RULES: 
+    1. ONLY reply to the last message sent by "Friend". NEVER reply to yourself or double-text unnecessarily. If the last message is from "Me", just naturally follow up.
+    2. If "Friend" asks a direct personal question (Where do you work? How old are you? What is your name?) check your "Known Facts".
+       - If the fact is missing, DO NOT answer. Return status: "needs_info" and identify the missingField.
+       - If the fact is in "Forbidden Topics", smoothly change the subject. Return status: "success" and write the pivot reply.
+       - If you know the fact, use it to answer naturally. Return status: "success".
+    3. Keep replies short, conversational, and human-like.
     
     Here is the recent conversation history for context:
     ${chatHistory.map((m) => `${m.role}: ${m.content}`).join("\n")}
       
-    Write your next message now:`;
+    Analyze and generate JSON response now:`;
 
-    // 5. 🩺 STABILITY GUARD: Race the Gemini generation against a 5-second timeout
-
+    // 4. 🩺 STABILITY GUARD: Race the Gemini generation against a 5-second timeout
     let timeoutId;
 
     try {
@@ -87,12 +125,11 @@ export async function POST(request) {
         timeoutPromise,
       ]);
 
-      let draftText = result.response.text();
+      // 5. 🟢 PARSE AND RETURN THE JSON DECISION
+      const jsonResponse = JSON.parse(result.response.text());
 
-      // Clean up any accidental quotes or whitespace Gemini might add
-      draftText = draftText.replace(/^["']|["']$/g, "").trim();
-
-      return NextResponse.json({ success: true, draft: draftText });
+      // This perfectly matches what the frontend is expecting: data.decision.status!
+      return NextResponse.json({ success: true, decision: jsonResponse });
     } finally {
       clearTimeout(timeoutId);
     }
