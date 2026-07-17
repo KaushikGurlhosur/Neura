@@ -51,8 +51,14 @@ const CheckIcon = ({ double, read }) => (
 );
 
 export default function ChatArea() {
-  const { activeChat, onlineUsers, typingUsers, websocket, currentUserId } =
-    useChat();
+  const {
+    activeChat,
+    setActiveChat,
+    onlineUsers,
+    typingUsers,
+    websocket,
+    currentUserId,
+  } = useChat();
 
   const [input, setInput] = useState("");
   const [replyTarget, setReplyTarget] = useState(null);
@@ -76,6 +82,10 @@ export default function ChatArea() {
   const [infoRequest, setInfoRequest] = useState(null);
 
   const [infoInputValue, setInfoInputValue] = useState("");
+
+  //FIX: Store teachings so the next AI request remembers them!
+  const [localKnowledge, setLocalKnowledge] = useState({});
+  const [localSkipped, setLocalSkipped] = useState([]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -223,7 +233,7 @@ export default function ChatArea() {
     e.preventDefault();
     if (!input.trim() || !websocket.isConnected || aiMode === "full") return;
 
-    // CodeRabbit Fix: Block sending if the conversation hasn't loaded yet!
+    // Fix: Block sending if the conversation hasn't loaded yet!
     if (activeChat.type === "direct" && !activeConversationId) return;
 
     if (activeChat.type === "direct") {
