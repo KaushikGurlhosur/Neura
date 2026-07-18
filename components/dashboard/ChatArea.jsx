@@ -77,6 +77,9 @@ export default function ChatArea() {
 
   const [isDrafting, setIsDrafting] = useState(false);
 
+  // Ref for auto pilot execution
+  const isAutoReplying = useRef(false);
+
   // ─── PRIVACY GUARD STATE ────────────────────────────────────────────────
 
   const [infoRequest, setInfoRequest] = useState(null);
@@ -186,6 +189,116 @@ export default function ChatArea() {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [websocket.messages, typingUsers]);
 
+  // ─── 🤖 THE FULL AUTOPILOT ENGINE ─────────────────────────────────────────
+  useEffect(() => {
+    // 1. Only run if Full Autopilot is ON and we have a valid conversation
+    if (aiMode !== "full" || !activeConversationId || !websocket.isConnected)
+      return;
+
+    const messages = websocket.messages;
+    if (messages.length === 0) return;
+
+    const lastMsg = messages[messages.length - 1];
+
+    // 2. Guards: Don't reply to yourself, wait if they are typing, lock if already replying
+    if (getSenderId(lastMsg.sender) === currentUserId) return;
+    if (typingUsers[activeChat._id]) return;
+    if (isAutoReplying.current) return;
+
+    const executeAutoPilot = async () => {
+      isAutoReplying.current = true;
+      try {
+        // ⏱️ Simulate reading speed (1.5 seconds)
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        // Abort if they started typing again or you turned off Autopilot
+        if (typingUsers[activeChat._id] || aiMode !== "full") {
+          isAutoReplying.current = false;
+          return;
+        }
+
+        // 🟢 Show "typing..." indicator to your friend
+        websocket.sendTyping(activeChat._id, true);
+
+        const recentMessages = websocket.messages.slice(-5).map((msg) => ({
+          role: getSenderId(msg.sender) === currentUserId ? "Me" : "Friend",
+          content: msg.content,
+        }));
+
+        // Fetch AI Decision
+        const res = await fetch("/api/ai/draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatHistory: recentMessages,
+            persona: aiPersona,
+            knowledgeBase: localKnowledge,
+            skippedFields: localSkipped,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.success && data.decision) {
+          if (data.decision.status === "needs_info") {
+            // 🛡️ PRIVACY INTERCEPT: Downgrade to partial mode and pop the shield!
+            setAiMode("partial");
+            setInfoRequest(data.decision.missingField || "a personal detail");
+          } else {
+            const replyText = data.decision.reply || "";
+            if (!replyText) return;
+
+            // ⏱️ Simulate typing speed (30ms per char)
+            const typingDelay = Math.min(
+              Math.max(replyText.length * 30, 1000),
+              4000,
+            );
+            await new Promise((resolve) => setTimeout(resolve, typingDelay));
+
+            // Abort if user turned it off while AI was "typing"
+            if (aiMode !== "full") return;
+
+            // 🚀 FIRE THE AUTONOMOUS MESSAGE!
+            if (activeChat.type === "direct") {
+              websocket.sendPrivateMessage(
+                activeChat._id,
+                replyText,
+                null,
+                activeConversationId,
+              );
+            } else {
+              websocket.sendGroupMessage(activeChat._id, replyText);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Autopilot Error:", error);
+      } finally {
+        websocket.sendTyping(activeChat._id, false);
+
+        // Wait 2 full seconds before allowing the AI to process the timeline again.
+        // This gives the WebSocket enough time to broadcast the sent message back
+        // to our screen, preventing the AI from replying to the same message twice!
+        setTimeout(() => {
+          isAutoReplying.current = false;
+        }, 2000);
+      }
+    };
+
+    executeAutoPilot();
+  }, [
+    websocket.messages,
+    typingUsers,
+    aiMode,
+    activeConversationId,
+    activeChat,
+    currentUserId,
+    aiPersona,
+    localKnowledge,
+    localSkipped,
+    websocket,
+  ]);
+
   if (!activeChat) {
     return (
       <div className="flex-1 h-full bg-[#262626] rounded-3xl shadow-[12px_12px_24px_#1a1a1a,-12px_-12px_24px_#323232] flex flex-col items-center justify-center p-6 text-center">
@@ -253,15 +366,17 @@ export default function ChatArea() {
     websocket.sendTyping(activeChat._id, false);
   };
 
-  // ─── 🟢 FIXED: REASONING ENGINE AI DRAFT ──────────────────────────────────
-  const handleAiDraft = async () => {
-    if (websocket.messages.length === 0 || isDrafting) return; // Prevent drafting if no messages or already drafting
+  const triggerAiDraft = async (
+    overrideKnowledge = null,
+    overrideSkipped = null,
+  ) => {
+    if (!activeConversationId || websocket.messages.length === 0 || isDrafting)
+      return;
 
     setIsDrafting(true);
     setInput("✨ AI is analyzing context...");
 
     try {
-      // Grab the last 5 messages for context
       const recentMessages = websocket.messages.slice(-5).map((msg) => ({
         role: getSenderId(msg.sender) === currentUserId ? "Me" : "Friend",
         content: msg.content,
@@ -273,20 +388,19 @@ export default function ChatArea() {
         body: JSON.stringify({
           chatHistory: recentMessages,
           persona: aiPersona,
-          knowledgeBase: {}, // TODO: Connect to DB later
-          skippedFields: [], // TODO: Connect to DB later
+          knowledgeBase: overrideKnowledge || localKnowledge,
+          skippedFields: overrideSkipped || localSkipped,
         }),
       });
 
       const data = await res.json();
 
-      if (data.success) {
-        // 🟢 NEW LOGIC: Check the JSON decision from the backend!
+      if (data.success && data.decision) {
         if (data.decision.status === "needs_info") {
           setInput("");
-          setInfoRequest(data.decision.missingField); // 🛡️ Pops the Privacy Shield!
+          setInfoRequest(data.decision.missingField);
         } else {
-          setInput(data.decision.reply); // 📝 Safe to Draft
+          setInput(data.decision.reply || "");
         }
       } else {
         setInput("");
@@ -299,6 +413,70 @@ export default function ChatArea() {
       setIsDrafting(false);
     }
   };
+
+  const handleAiDraft = () => triggerAiDraft();
+
+  const handleTeachAi = () => {
+    const newKnowledge = { ...localKnowledge, [infoRequest]: infoInputValue };
+    setLocalKnowledge(newKnowledge);
+    setInfoRequest(null);
+    setInfoInputValue("");
+    triggerAiDraft(newKnowledge, localSkipped); // auto-retry draft with new info
+  };
+
+  const handleSkipAi = () => {
+    const newSkipped = [...localSkipped, infoRequest];
+    setLocalSkipped(newSkipped);
+    setInfoRequest(null);
+    triggerAiDraft(localKnowledge, newSkipped); // Auto-retry draft skipping topic
+  };
+
+  //─── 🟢 FIXED: REASONING ENGINE AI DRAFT ─────────
+  // const handleAiDraft = async () => {
+  //   if (websocket.messages.length === 0 || isDrafting) return; // Prevent drafting if no messages or already drafting
+
+  //   setIsDrafting(true);
+  //   setInput("✨ AI is analyzing context...");
+
+  //   try {
+  //     // Grab the last 5 messages for context
+  //     const recentMessages = websocket.messages.slice(-5).map((msg) => ({
+  //       role: getSenderId(msg.sender) === currentUserId ? "Me" : "Friend",
+  //       content: msg.content,
+  //     }));
+
+  //     const res = await fetch("/api/ai/draft", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         chatHistory: recentMessages,
+  //         persona: aiPersona,
+  //         knowledgeBase: {}, // TODO: Connect to DB later
+  //         skippedFields: [], // TODO: Connect to DB later
+  //       }),
+  //     });
+
+  //     const data = await res.json();
+
+  //     if (data.success) {
+  //       // 🟢 NEW LOGIC: Check the JSON decision from the backend!
+  //       if (data.decision.status === "needs_info") {
+  //         setInput("");
+  //         setInfoRequest(data.decision.missingField); // 🛡️ Pops the Privacy Shield!
+  //       } else {
+  //         setInput(data.decision.reply); // 📝 Safe to Draft
+  //       }
+  //     } else {
+  //       setInput("");
+  //       console.error("Failed to generate draft");
+  //     }
+  //   } catch (error) {
+  //     setInput("");
+  //     console.error("AI Draft Error:", error);
+  //   } finally {
+  //     setIsDrafting(false);
+  //   }
+  // };
 
   const handleDelete = async (msgId, scope) => {
     try {
@@ -592,19 +770,12 @@ export default function ChatArea() {
                     className="flex-1 bg-[#1a1a1a] text-[#ecfdf5] text-xs p-2.5 rounded-xl outline-none shadow-[inset_4px_4px_8px_#0f0f0f,inset_-4px_-4px_8px_#252525]"
                   />
                   <button
-                    onClick={() => {
-                      console.log(`Saving ${infoRequest}: ${infoInputValue}`);
-                      setInfoRequest(null);
-                      setInfoInputValue("");
-                    }}
+                    onClick={handleTeachAi}
                     className="px-3 py-2 bg-[#262626] text-[#a7f3d0] rounded-xl text-xs font-bold shadow-[4px_4px_8px_#1a1a1a,-4px_-4px_8px_#323232] hover:text-[#ecfdf5]">
                     Teach
                   </button>
                   <button
-                    onClick={() => {
-                      console.log(`Skipping ${infoRequest}`);
-                      setInfoRequest(null);
-                    }}
+                    onClick={handleSkipAi}
                     className="px-3 py-2 bg-[#262626] text-rose-400 rounded-xl text-xs font-bold shadow-[4px_4px_8px_#1a1a1a,-4px_-4px_8px_#323232] hover:text-rose-200">
                     Skip
                   </button>
@@ -654,11 +825,12 @@ export default function ChatArea() {
             AI
           </motion.button>
           <div className="flex-1 relative flex items-center min-w-0">
+            {/* 🟢 FIXED: Input Placeholder changes dynamically for Full Autopilot */}
             <input
               type="text"
               placeholder={
                 aiMode === "full"
-                  ? "🚀 Autopilot..."
+                  ? "🚀 Autopilot engaged. Hands free..."
                   : websocket.isConnected && activeConversationId
                     ? "Message..."
                     : "Loading..."
@@ -671,7 +843,7 @@ export default function ChatArea() {
                 !activeConversationId ||
                 isDrafting
               }
-              className={`w-full border border-transparent rounded-xl md:rounded-2xl p-3 md:p-4 pr-16 md:pr-24 text-xs md:text-sm outline-none font-light tracking-wide transition-all ${aiMode === "full" ? "bg-[#1a1a1a] shadow-[inset_4px_4px_8px_#0f0f0f,inset_-4px_-4px_8px_#252525] text-purple-300/50 italic" : "bg-[#262626] shadow-[inset_4px_4px_8px_#1a1a1a,inset_-4px_-4px_8px_#323232] text-[#ecfdf5] placeholder-neutral-500 focus:border-amber-100/20"}`}
+              className={`w-full border border-transparent rounded-xl md:rounded-2xl p-3 md:p-4 pr-16 md:pr-24 text-xs md:text-sm outline-none font-light tracking-wide transition-all ${aiMode === "full" ? "bg-[#1a1a1a] shadow-[inset_4px_4px_8px_#0f0f0f,inset_-4px_-4px_8px_#252525] text-purple-300/50 italic" : "bg-[#262626] shadow-[inset_4px_4px_8px_#1a1a1a,inset_-4px_-4px_8px_#323232] text-[#ecfdf5] focus:border-amber-100/20"}`}
             />
             <AnimatePresence>
               {aiMode === "partial" && (
@@ -681,7 +853,7 @@ export default function ChatArea() {
                   exit={{ opacity: 0, scale: 0.8 }}
                   type="button"
                   onClick={handleAiDraft}
-                  disabled={isDrafting}
+                  disabled={!activeConversationId || isDrafting}
                   className="absolute right-2 md:right-3 py-1.5 md:py-2 px-3 md:px-4 rounded-lg md:rounded-xl bg-[#323232] text-amber-200 font-medium tracking-wide text-[9px] md:text-[10px] uppercase shadow-[4px_4px_8px_#1a1a1a,-4px_-4px_8px_#323232] hover:bg-[#3a3a3a] transition-all whitespace-nowrap">
                   {isDrafting ? "✨..." : "Draft ✨"}
                 </motion.button>

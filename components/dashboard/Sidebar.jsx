@@ -156,7 +156,7 @@ const Sidebar = () => {
             placeholder="Search network..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#262626] text-neutral-300 placeholder-neutral-500 text-xs md:text-sm p-3 md:p-3.5 pl-9 rounded-xl tracking-widest font-extralight outline-none border border-transparent focus:border-amber-500/20 transition-all ease-in-out duration-300 shadow-[inset_4px_4px_8px_#1a1a1a,inset_-4px_-4px_8px_#323232] focus:shadow-[inset_6px_6px_12px_#1a1a1a,inset_-6px_-6px_12px_#323232]"
+            className="w-full bg-[#262626] text-neutral-300  placeholder-neutral-500 text-xs md:text-sm p-3 md:p-3.5 md:pl-9 pl-9  rounded-xl tracking-widest font-extralight outline-none border border-transparent focus:border-amber-500/20 transition-all ease-in-out duration-300 shadow-[inset_4px_4px_8px_#1a1a1a,inset_-4px_-4px_8px_#323232] focus:shadow-[inset_6px_6px_12px_#1a1a1a,inset_-6px_-6px_12px_#323232]"
           />
         </div>
       </div>
