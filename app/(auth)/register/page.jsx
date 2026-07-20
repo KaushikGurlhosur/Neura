@@ -129,6 +129,30 @@ export default function RegisterPage() {
     phoneNumber: "",
   });
 
+  const checkExistingUser = async (field, value) => {
+    try {
+      const res = await fetch("/api/auth/check-exists", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ field, value }),
+      });
+
+      const data = await res.json();
+      if (data.exists) {
+        setWarnings((prev) => ({
+          ...prev,
+          [field]: `This ${field} already exists.`,
+        }));
+      } else {
+        setWarnings((prev) => ({ ...prev, [field]: "" }));
+      }
+    } catch (error) {
+      console.error("Target lookup validation failed.");
+    }
+  };
+
   // ─── Real-Time Field Verification Loops
   useEffect(() => {
     if (!form.username) return;
@@ -168,30 +192,6 @@ export default function RegisterPage() {
     }
   }, [form.password, form.confirmPassword]);
 
-  const checkExistingUser = async (field, value) => {
-    try {
-      const res = await fetch("/api/auth/check-exists", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ field, value }),
-      });
-
-      const data = await res.json();
-      if (data.exists) {
-        setWarnings((prev) => ({
-          ...prev,
-          [field]: `This ${field} already exists.`,
-        }));
-      } else {
-        setWarnings((prev) => ({ ...prev, [field]: "" }));
-      }
-    } catch (error) {
-      console.error("Target lookup validation failed.");
-    }
-  };
-
   const hasWarnings =
     warnings.username || warnings.email || warnings.phoneNumber;
 
@@ -202,6 +202,7 @@ export default function RegisterPage() {
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
+      setIsLoading(false);
       return;
     }
 
@@ -217,6 +218,9 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.errors && data.errors.length > 0) {
+          throw new Error(data.errors[0]);
+        }
         throw new Error(data.error || "Registration failed");
       }
 
