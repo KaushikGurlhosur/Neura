@@ -129,7 +129,7 @@ export default function RegisterPage() {
     phoneNumber: "",
   });
 
-  const checkExistingUser = async (field, value) => {
+  const checkExistingUser = async (field, value, signal) => {
     try {
       const res = await fetch("/api/auth/check-exists", {
         method: "POST",
@@ -137,6 +137,7 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ field, value }),
+        signal, // Connects the abort controller to the network request
       });
 
       const data = await res.json();
@@ -149,6 +150,8 @@ export default function RegisterPage() {
         setWarnings((prev) => ({ ...prev, [field]: "" }));
       }
     } catch (error) {
+      // If we aborted the request manually, don't print an error to the console
+      if (error.name === "AbortError") return;
       console.error("Target lookup validation failed.");
     }
   };
@@ -156,28 +159,42 @@ export default function RegisterPage() {
   // ─── Real-Time Field Verification Loops
   useEffect(() => {
     if (!form.username) return;
+    const controller = new AbortController();
 
     const delay = setTimeout(() => {
-      checkExistingUser("username", form.username);
+      checkExistingUser("username", form.username, controller.signal);
     }, 400);
 
-    return () => clearTimeout(delay);
+    return () => {
+      clearTimeout(delay);
+      controller.abort(); // Kills the in-flight network request if the user keeps typing or clears the box
+    };
   }, [form.username]);
 
   useEffect(() => {
     if (!form.email) return;
+
+    const controller = new AbortController();
+
     const delay = setTimeout(() => {
-      checkExistingUser("email", form.email);
-    });
-    return () => clearTimeout(delay); // cleanup function to prevent memory leaks
+      checkExistingUser("email", form.email, controller.signal);
+    }, 400);
+    return () => {
+      clearTimeout(delay); // cleanup function to prevent memory leaks
+      controller.abort();
+    };
   }, [form.email]);
 
   useEffect(() => {
     if (!form.phoneNumber) return;
+    const controller = new AbortController();
     const delay = setTimeout(() => {
-      checkExistingUser("phoneNumber", form.phoneNumber);
-    });
-    return () => clearTimeout(delay);
+      checkExistingUser("phoneNumber", form.phoneNumber, controller.signal);
+    }, 400);
+    return () => {
+      clearTimeout(delay);
+      controller.abort();
+    };
   }, [form.phoneNumber]);
 
   useEffect(() => {
