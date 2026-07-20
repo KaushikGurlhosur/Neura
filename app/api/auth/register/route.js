@@ -23,15 +23,44 @@ export async function POST(request) {
       $or: searchCriteria,
     });
 
-    if (existingUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "User with the provided email, phone number, or username already exists",
-        },
-        { status: 400 },
+    if (existingUser > 0) {
+      const isVerifiedMatch = existingUser.some(
+        (user) => user.isVerified === true,
       );
+
+      if (isVerifiedMatch) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "User with the provided email, phone number, or username already exists",
+          },
+          { status: 400 },
+        );
+      }
+
+      // 🛡️ SHIELD 2: They are unverified, but are they recent?
+      // Find unverified accounts that were created less than 15 minutes ago
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+      const recentUnverified = existingUser.some(
+        (user) => user.createdAt > fifteenMinutesAgo,
+      );
+
+      if (recentUnverified) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "An OTP was just sent to this email. Please check your inbox or wait 15 minutes to try again",
+          },
+          { status: 400 },
+        );
+      } else {
+        await Users.deleteMany({
+          $or: searchCriteria,
+          isVerified: false,
+        });
+      }
     }
 
     // Errors
