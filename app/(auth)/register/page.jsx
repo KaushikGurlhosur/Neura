@@ -156,6 +156,7 @@ export default function RegisterPage() {
   // ─── Real-Time Field Verification Loops
   useEffect(() => {
     if (!form.username) return;
+
     const delay = setTimeout(() => {
       checkExistingUser("username", form.username);
     }, 400);
@@ -354,9 +355,11 @@ export default function RegisterPage() {
                   placeholder="User Name"
                   value={form.username}
                   maxLength={30}
-                  onChange={(e) =>
-                    setForm({ ...form, username: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setForm({ ...form, username: e.target.value });
+                    if (!e.target.value)
+                      setWarnings((prev) => ({ ...prev, username: "" }));
+                  }}
                   required
                 />
               </div>
@@ -379,7 +382,12 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="Email Address"
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onChange={(e) => {
+                    setForm({ ...form, email: e.target.value });
+
+                    if (!e.target.value)
+                      setWarnings((prev) => ({ ...prev, email: "" }));
+                  }}
                   required
                 />
               </div>
@@ -409,6 +417,7 @@ export default function RegisterPage() {
                     onChange={(value) => {
                       if (!value) {
                         setForm({ ...form, phoneNumber: "" });
+                        setWarnings((prev) => ({ ...prev, phoneNumber: "" }));
                         return;
                       }
                       // limit to 15 digits (E.164 international standard)
