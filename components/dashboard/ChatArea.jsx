@@ -90,6 +90,9 @@ export default function ChatArea() {
   const [localKnowledge, setLocalKnowledge] = useState({});
   const [localSkipped, setLocalSkipped] = useState([]);
 
+  const getSenderId = (sender) => sender?._id || sender;
+  const processedMessageIdRef = useRef(null);
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (aiMenuRef.current && !aiMenuRef.current.contains(event.target)) {
@@ -205,14 +208,23 @@ export default function ChatArea() {
     if (typingUsers[activeChat._id]) return;
     if (isAutoReplying.current) return;
 
+    const incomingMsgId = lastMsg._id || lastMsg.tempId;
+    if (processedMessageIdRef.current === incomingMsgId) return;
+
+    let isCancelled = false; // Cancellation Token to stop ghost texting.
+
     const executeAutoPilot = async () => {
       isAutoReplying.current = true;
+
+      // Lock this specific message ID immediately
+      processedMessageIdRef.current = incomingMsgId;
+
       try {
         // ⏱️ Simulate reading speed (1.5 seconds)
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
         // Abort if they started typing again or you turned off Autopilot
-        if (typingUsers[activeChat._id] || aiMode !== "full") {
+        if (isCancelled || typingUsers[activeChat._id] || aiMode !== "full") {
           isAutoReplying.current = false;
           return;
         }
@@ -237,12 +249,17 @@ export default function ChatArea() {
           }),
         });
 
+        // Stop processing if user switched chats during the network request
+        if (isCancelled) return;
+
         const data = await res.json();
 
         if (data.success && data.decision) {
           if (data.decision.status === "needs_info") {
             // 🛡️ PRIVACY INTERCEPT: Downgrade to partial mode and pop the shield!
-            setAiMode("partial");
+            // setAiMode("partial");
+            // Replaced setAiMode with handleAiModeChange to persist to DB!
+            handleAiModeChange("partial");
             setInfoRequest(data.decision.missingField || "a personal detail");
           } else {
             const replyText = data.decision.reply || "";
@@ -256,7 +273,7 @@ export default function ChatArea() {
             await new Promise((resolve) => setTimeout(resolve, typingDelay));
 
             // Abort if user turned it off while AI was "typing"
-            if (aiMode !== "full") return;
+            if (isCancelled || aiMode !== "full") return;
 
             // 🚀 FIRE THE AUTONOMOUS MESSAGE!
             if (activeChat.type === "direct") {
@@ -276,6 +293,7 @@ export default function ChatArea() {
       } finally {
         websocket.sendTyping(activeChat._id, false);
 
+        if (!isCancelled) websocket.sendTyping(activeChat._id, false);
         // Wait 2 full seconds before allowing the AI to process the timeline again.
         // This gives the WebSocket enough time to broadcast the sent message back
         // to our screen, preventing the AI from replying to the same message twice!
@@ -286,6 +304,11 @@ export default function ChatArea() {
     };
 
     executeAutoPilot();
+
+    // 🟢 ADDED: Unmount cleanup function kills the run if you switch chats
+    return () => {
+      isCancelled = true;
+    };
   }, [
     websocket.messages,
     typingUsers,
@@ -326,7 +349,6 @@ export default function ChatArea() {
   const isPartnerOnline = onlineUsers.has(activeChat._id);
   const isPartnerTyping = typingUsers[activeChat._id];
   const chatDisplayName = activeChat.name || activeChat.username || "Chat";
-  const getSenderId = (sender) => sender?._id || sender;
 
   // ─── HANDLERS ───────────────────────────────────────────────────────────
   const handleTyping = (e) => {
