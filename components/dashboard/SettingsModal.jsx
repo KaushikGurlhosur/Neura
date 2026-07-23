@@ -37,7 +37,7 @@ const SettingsModal = ({ isOpen, onClose, user }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const [form, setForm] = useState({
-    name: user?.name,
+    name: user?.name || "",
     username: user?.username || "",
     bio: user?.bio || "Hey I'm using Neura",
   });
@@ -54,7 +54,7 @@ const SettingsModal = ({ isOpen, onClose, user }) => {
 
       router.push("/login");
     } catch (error) {
-      console.errror("Logout failed: ", error);
+      console.error("Logout failed: ", error);
       setIsLoggingOut(false);
     }
   };
@@ -68,7 +68,7 @@ const SettingsModal = ({ isOpen, onClose, user }) => {
             initial={{ opacity: 0, scale: 0.5, y: 40 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, y: 40 }}
-            className="w-[95%] sm:w-full max-w-md bg-[#262626] rounded-2xl md:rounded-3xl shadow-[12px_12px_24px_#1a1a1a],-12px_-12px_24px_#323232,0_0_40px_rgba(0,0,0,0.5) overflow-hidden border border-white/5 flex flex-col max-h-[90dvh]">
+            className="w-[95%] sm:w-full max-w-md bg-[#262626] rounded-2xl md:rounded-3xl shadow-[12px_12px_24px_#1a1a1a,-12px_-12px_24px_#323232,0_0_40px_rgba(0,0,0,0.5) overflow-hidden border border-white/5 flex flex-col max-h-[90dvh]">
             <div className="p-4 md:p-5 flex justify-between items-center border-b border-[#ace8cc]/5 shrink-0 bg-[#262626]">
               <h2 className="text-[#ace8cc] font-black text-lg md:text-xl tracking-wide relative group cursor-pointer">
                 Settings
