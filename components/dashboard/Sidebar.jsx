@@ -3,6 +3,7 @@
 import { useChat } from "@/context/ChatContext";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import SettingsModal from "./SettingsModal";
 
 // ─── SVG ICONS ────────────────────────────────────────────────────────────
 const SearchIcon = () => (
@@ -42,6 +43,7 @@ const Sidebar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     const handleChatUpdate = (event) => {
@@ -130,172 +132,181 @@ const Sidebar = () => {
   return (
     // 🟢 MOBILE-FIRST FIX: Takes w-full on mobile, fixed w-80 on desktop.
     // Hides on mobile if a chat is active (`activeChat ? "hidden md:flex" : "flex"`).
-    <div
-      className={`dashboard-element ${activeChat ? "hidden md:flex" : "flex"} w-full md:w-80 h-full bg-[#262626] rounded-2xl md:rounded-3xl shadow-[8px_8px_16px_#1a1a1a,-8px_-8px_16px_#323232] flex-col overflow-hidden shrink-0`}>
-      {/* ─── HEADER ─── */}
-      <div className="p-4 md:p-5 pb-3 md:pb-4 flex justify-between items-center border-b border-white/5">
-        <h2 className="text-xl md:text-2xl font-black text-[#ecfdf5] hover:text-[#fed7aa] transition duration-300 ease-in-out cursor-pointer">
-          Chats
-        </h2>
-        <motion.button
-          whileHover={{ scale: 1.1, rotate: 90 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2 rounded-xl text-[#ecfdf5] hover:text-[#a7f3d0] transition duration-300 ease-in-out shadow-[inset_2px_2px_5px_#1a1a1a,inset_-2px_-2px_5px_#323232]">
-          <SettingsIcon />
-        </motion.button>
-      </div>
+    <>
+      <div
+        className={`dashboard-element ${activeChat ? "hidden md:flex" : "flex"} w-full md:w-80 h-full bg-[#262626] rounded-2xl md:rounded-3xl shadow-[8px_8px_16px_#1a1a1a,-8px_-8px_16px_#323232] flex-col overflow-hidden shrink-0`}>
+        {/* ─── HEADER ─── */}
+        <div className="p-4 md:p-5 pb-3 md:pb-4 flex justify-between items-center border-b border-white/5">
+          <h2 className="text-xl md:text-2xl font-black text-[#ecfdf5] hover:text-[#fed7aa] transition duration-300 ease-in-out cursor-pointer">
+            Chats
+          </h2>
+          <motion.button
+            onClick={() => setIsSettingsOpen(true)}
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-2 rounded-xl text-[#ecfdf5] hover:text-[#a7f3d0] transition duration-300 ease-in-out shadow-[inset_2px_2px_5px_#1a1a1a,inset_-2px_-2px_5px_#323232]">
+            <SettingsIcon />
+          </motion.button>
+        </div>
 
-      {/* ─── NEUMORPHIC SEARCH BAR ─── */}
-      <div className="px-4 md:px-5 py-3 md:py-4">
-        <div className="relative flex items-center">
-          <div className="absolute left-3 text-neutral-400 hover:text-amber-100 hover:scale-110 transition duration-300 ease-in-out">
-            <SearchIcon />
+        {/* ─── NEUMORPHIC SEARCH BAR ─── */}
+        <div className="px-4 md:px-5 py-3 md:py-4">
+          <div className="relative flex items-center">
+            <div className="absolute left-3 text-neutral-400 hover:text-amber-100 hover:scale-110 transition duration-300 ease-in-out">
+              <SearchIcon />
+            </div>
+            <input
+              type="text"
+              placeholder="Search network..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#262626] text-neutral-300  placeholder-neutral-500 text-xs md:text-sm p-3 md:p-3.5 md:pl-9 pl-9  rounded-xl tracking-widest font-extralight outline-none border border-transparent focus:border-amber-500/20 transition-all ease-in-out duration-300 shadow-[inset_4px_4px_8px_#1a1a1a,inset_-4px_-4px_8px_#323232] focus:shadow-[inset_6px_6px_12px_#1a1a1a,inset_-6px_-6px_12px_#323232]"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Search network..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#262626] text-neutral-300  placeholder-neutral-500 text-xs md:text-sm p-3 md:p-3.5 md:pl-9 pl-9  rounded-xl tracking-widest font-extralight outline-none border border-transparent focus:border-amber-500/20 transition-all ease-in-out duration-300 shadow-[inset_4px_4px_8px_#1a1a1a,inset_-4px_-4px_8px_#323232] focus:shadow-[inset_6px_6px_12px_#1a1a1a,inset_-6px_-6px_12px_#323232]"
-          />
+        </div>
+
+        {/* ─── LIST AREA ─── */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 md:px-3 pb-4 custom-scrollbar">
+          <AnimatePresence mode="wait">
+            {searchQuery.length >= 3 ? (
+              /* ─── SEARCH RESULTS ─── */
+              <motion.div
+                key="search"
+                variants={listVariants}
+                initial="hidden"
+                animate="show"
+                exit="hidden"
+                className="flex flex-col gap-2">
+                <h4 className="px-3 text-[10px] md:text-xs font-black text-neutral-500 uppercase tracking-widest mb-1">
+                  Directory
+                </h4>
+                {isSearching ? (
+                  <div className="text-center text-xs md:text-sm text-neutral-500 py-4 animate-pulse font-light tracking-wider">
+                    Searching...
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((user) => (
+                    <motion.button
+                      key={user._id}
+                      variants={itemVariants}
+                      onClick={() => handleUserSelect(user)}
+                      className="flex items-center gap-3 p-3 rounded-2xl w-full text-left transition-all duration-300 bg-[#262626] shadow-[4px_4px_8px_#1a1a1a,-4px_-4px_8px_#323232] hover:shadow-[inset_2px_2px_5px_#1a1a1a,inset_-2px_-2px_5px_#323232] group">
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-md object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <div className="flex-1 overflow-hidden">
+                        <h4 className="text-[#ecfdf5] font-bold text-xs md:text-sm truncate group-hover:text-[#fed7aa]">
+                          {user.name}
+                        </h4>
+                        <p className="text-neutral-400 font-light text-[10px] md:text-xs truncate tracking-wider">
+                          @{user.username}
+                        </p>
+                      </div>
+                    </motion.button>
+                  ))
+                ) : (
+                  <div className="text-center text-xs md:text-sm text-neutral-500 font-light tracking-wider py-4">
+                    No users found.
+                  </div>
+                )}
+              </motion.div>
+            ) : (
+              /* ─── RECENT CONVERSATIONS ─── */
+              <motion.div
+                key="recent"
+                variants={listVariants}
+                initial="hidden"
+                animate="show"
+                className="flex flex-col gap-2">
+                {conversations?.map((conv) => {
+                  const partner = conv.participants?.find(
+                    (p) => typeof p === "object" && p._id !== currentUserId,
+                  );
+                  if (!partner) return null;
+                  const isOnline = onlineUsers.has(partner._id);
+                  const isTyping = typingUsers[partner._id];
+                  const isActive = activeChat?._id === partner._id;
+                  const mySettings = conv.participantSettings?.find(
+                    (s) => s.user === currentUserId,
+                  );
+                  const unreadCount = mySettings?.unreadCount || 0;
+
+                  return (
+                    <motion.button
+                      key={conv._id}
+                      variants={itemVariants}
+                      layoutId={`chat-${conv._id}`}
+                      onClick={() =>
+                        setActiveChat({
+                          _id: partner._id,
+                          name: partner.name,
+                          username: partner.username,
+                          avatar: partner.avatar,
+                          type: "direct",
+                          conversationId: conv._id,
+                        })
+                      }
+                      className={`relative flex items-center gap-3 p-3 rounded-2xl w-full text-left transition-all duration-300 group ${isActive ? "bg-[#262626] shadow-[inset_4px_4px_8px_#1a1a1a,inset_-4px_-4px_8px_#323232]" : "bg-transparent hover:bg-[#323232]/30"}`}>
+                      <div className="relative shrink-0">
+                        <img
+                          src={partner.avatar}
+                          alt={partner.name}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-full shadow-sm object-cover transition-transform duration-300 ${!isActive && "group-hover:scale-105"}`}
+                        />
+                        {isOnline && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 md:w-3.5 md:h-3.5 bg-[#2ecc71] border-2 border-[#262626] rounded-full shadow-sm" />
+                        )}
+                      </div>
+                      <div className="flex-1 overflow-hidden min-w-0">
+                        <div className="flex justify-between items-baseline mb-0.5 gap-2">
+                          <h4
+                            className={`font-bold text-xs md:text-sm truncate transition-colors duration-300 ${isActive ? "text-[#a7f3d0]" : "text-[#ecfdf5] group-hover:text-[#fed7aa]"}`}>
+                            {partner.name}
+                          </h4>
+                          {conv.lastMessageAt && (
+                            <span className="text-[9px] md:text-[10px] font-semibold text-neutral-500 shrink-0 tracking-wider">
+                              {new Date(conv.lastMessageAt).toLocaleTimeString(
+                                [],
+                                { hour: "2-digit", minute: "2-digit" },
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-center gap-2">
+                          <p
+                            className={`text-[10px] md:text-xs truncate font-light tracking-wide ${unreadCount > 0 ? "text-[#ecfdf5] font-medium" : "text-neutral-400"}`}>
+                            {isTyping ? (
+                              <span className="text-[#a7f3d0] animate-pulse">
+                                typing...
+                              </span>
+                            ) : (
+                              conv.lastMessage?.content || "Tap to chat"
+                            )}
+                          </p>
+                          {unreadCount > 0 && (
+                            <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-amber-500 flex items-center justify-center text-[#262626] text-[9px] md:text-[10px] font-black shadow-sm shrink-0">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* ─── LIST AREA ─── */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 md:px-3 pb-4 custom-scrollbar">
-        <AnimatePresence mode="wait">
-          {searchQuery.length >= 3 ? (
-            /* ─── SEARCH RESULTS ─── */
-            <motion.div
-              key="search"
-              variants={listVariants}
-              initial="hidden"
-              animate="show"
-              exit="hidden"
-              className="flex flex-col gap-2">
-              <h4 className="px-3 text-[10px] md:text-xs font-black text-neutral-500 uppercase tracking-widest mb-1">
-                Directory
-              </h4>
-              {isSearching ? (
-                <div className="text-center text-xs md:text-sm text-neutral-500 py-4 animate-pulse font-light tracking-wider">
-                  Searching...
-                </div>
-              ) : searchResults.length > 0 ? (
-                searchResults.map((user) => (
-                  <motion.button
-                    key={user._id}
-                    variants={itemVariants}
-                    onClick={() => handleUserSelect(user)}
-                    className="flex items-center gap-3 p-3 rounded-2xl w-full text-left transition-all duration-300 bg-[#262626] shadow-[4px_4px_8px_#1a1a1a,-4px_-4px_8px_#323232] hover:shadow-[inset_2px_2px_5px_#1a1a1a,inset_-2px_-2px_5px_#323232] group">
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-md object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <div className="flex-1 overflow-hidden">
-                      <h4 className="text-[#ecfdf5] font-bold text-xs md:text-sm truncate group-hover:text-[#fed7aa]">
-                        {user.name}
-                      </h4>
-                      <p className="text-neutral-400 font-light text-[10px] md:text-xs truncate tracking-wider">
-                        @{user.username}
-                      </p>
-                    </div>
-                  </motion.button>
-                ))
-              ) : (
-                <div className="text-center text-xs md:text-sm text-neutral-500 font-light tracking-wider py-4">
-                  No users found.
-                </div>
-              )}
-            </motion.div>
-          ) : (
-            /* ─── RECENT CONVERSATIONS ─── */
-            <motion.div
-              key="recent"
-              variants={listVariants}
-              initial="hidden"
-              animate="show"
-              className="flex flex-col gap-2">
-              {conversations?.map((conv) => {
-                const partner = conv.participants?.find(
-                  (p) => typeof p === "object" && p._id !== currentUserId,
-                );
-                if (!partner) return null;
-                const isOnline = onlineUsers.has(partner._id);
-                const isTyping = typingUsers[partner._id];
-                const isActive = activeChat?._id === partner._id;
-                const mySettings = conv.participantSettings?.find(
-                  (s) => s.user === currentUserId,
-                );
-                const unreadCount = mySettings?.unreadCount || 0;
-
-                return (
-                  <motion.button
-                    key={conv._id}
-                    variants={itemVariants}
-                    layoutId={`chat-${conv._id}`}
-                    onClick={() =>
-                      setActiveChat({
-                        _id: partner._id,
-                        name: partner.name,
-                        username: partner.username,
-                        avatar: partner.avatar,
-                        type: "direct",
-                        conversationId: conv._id,
-                      })
-                    }
-                    className={`relative flex items-center gap-3 p-3 rounded-2xl w-full text-left transition-all duration-300 group ${isActive ? "bg-[#262626] shadow-[inset_4px_4px_8px_#1a1a1a,inset_-4px_-4px_8px_#323232]" : "bg-transparent hover:bg-[#323232]/30"}`}>
-                    <div className="relative shrink-0">
-                      <img
-                        src={partner.avatar}
-                        alt={partner.name}
-                        className={`w-10 h-10 md:w-12 md:h-12 rounded-full shadow-sm object-cover transition-transform duration-300 ${!isActive && "group-hover:scale-105"}`}
-                      />
-                      {isOnline && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 md:w-3.5 md:h-3.5 bg-[#2ecc71] border-2 border-[#262626] rounded-full shadow-sm" />
-                      )}
-                    </div>
-                    <div className="flex-1 overflow-hidden min-w-0">
-                      <div className="flex justify-between items-baseline mb-0.5 gap-2">
-                        <h4
-                          className={`font-bold text-xs md:text-sm truncate transition-colors duration-300 ${isActive ? "text-[#a7f3d0]" : "text-[#ecfdf5] group-hover:text-[#fed7aa]"}`}>
-                          {partner.name}
-                        </h4>
-                        {conv.lastMessageAt && (
-                          <span className="text-[9px] md:text-[10px] font-semibold text-neutral-500 shrink-0 tracking-wider">
-                            {new Date(conv.lastMessageAt).toLocaleTimeString(
-                              [],
-                              { hour: "2-digit", minute: "2-digit" },
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex justify-between items-center gap-2">
-                        <p
-                          className={`text-[10px] md:text-xs truncate font-light tracking-wide ${unreadCount > 0 ? "text-[#ecfdf5] font-medium" : "text-neutral-400"}`}>
-                          {isTyping ? (
-                            <span className="text-[#a7f3d0] animate-pulse">
-                              typing...
-                            </span>
-                          ) : (
-                            conv.lastMessage?.content || "Tap to chat"
-                          )}
-                        </p>
-                        {unreadCount > 0 && (
-                          <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-amber-500 flex items-center justify-center text-[#262626] text-[9px] md:text-[10px] font-black shadow-sm shrink-0">
-                            {unreadCount > 9 ? "9+" : unreadCount}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        user={{ _id: currentUserId }}
+      />
+    </>
   );
 };
 
