@@ -67,3 +67,71 @@ export async function GET(request) {
     );
   }
 }
+
+export async function PUT(request) {
+  try {
+    await dbConnect();
+
+    // 1. Authenticate the user
+    const token = request.cookies.get("token")?.value;
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Not authenticated." },
+        { status: 401 },
+      );
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // 2. Parse the incoming data (Name and Bio)
+    const body = await request.json();
+    const { name, bio } = body;
+
+    // Basic Validation
+    if (!name || name.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Display name cannot be empty." },
+        { status: 400 },
+      );
+    }
+
+    // 3. Update the database
+    // $set ensures we ONLY update name and bio, preventing users from hacking their email/phone fields
+    const updatedUser = await Users.findByIdAndUpdate(
+      decoded.userId,
+      {
+        $set: {
+          name: name.trim(),
+          bio: bio.trim(),
+        },
+      },
+      { new: true, runValidators: true }, // Returns the newly updated document
+    );
+
+    if (!updatedUser) {
+      return NextResponse.json(
+        { success: false, message: "User not found." },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Profile updated successfully!",
+        user: {
+          id: updatedUser._id.toString(),
+          name: updatedUser.name,
+          username: updatedUser.username,
+          bio: updatedUser.bio,
+        },
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("Profile update error: ", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to update profile." },
+      { status: 500 },
+    );
+  }
+}
